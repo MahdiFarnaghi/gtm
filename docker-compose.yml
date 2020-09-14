@@ -2,9 +2,9 @@ version: '2'
 
 services:
   gtm_twitter_listener:
-    build: .
+    build: .    
     container_name: gtm_twitter_listener
     restart: unless-stopped    
     volumes:
       - /data/tweets:/data/tweets
-    command python 
+    command: python forever.py retrieve_data_world.py
