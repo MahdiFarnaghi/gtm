@@ -1,0 +1,10 @@
+version: '2'
+
+services:
+  gtm_twitter_listener:
+    build: .
+    container_name: gtm_twitter_listener
+    restart: unless-stopped    
+    volumes:
+      - /data/tweets:/data/tweets
+    command python 
