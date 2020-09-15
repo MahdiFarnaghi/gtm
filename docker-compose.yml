@@ -2,7 +2,9 @@ version: '2'
 
 services:
   gtm_twitter_listener:
-    build: .    
+    build:
+      context: .
+      dockerfile: Dockerfile-Twitter_Listener      
     container_name: gtm_twitter_listener
     restart: unless-stopped    
     volumes:
