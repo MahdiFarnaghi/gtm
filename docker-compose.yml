@@ -1,14 +1,16 @@
 version: '2'
 
 services:
-  # gtm_postgis:
-  #   container_name: gtm_postgis
-  #   restart: unless-stopped
-  #   image: mdillon/postgis:11
-  #   volumes: 
-  #     - /data/gtm_postgis:/data/gtm_postgis
-  #   environment: 
-  #     POSTGRES_USER: ${POSTGRES_USER} 
+  gtm_postgis:
+    container_name: gtm_postgis
+    restart: unless-stopped
+    image: mdillon/postgis:11
+    volumes: 
+      - /data/gtm_postgis:/data/gtm_postgis
+    environment: 
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASS: ${POSTGRES_PASS}
+      POSTGRES_PASSWORD: ${POSTGRES_PASS}
   gtm_twitter_listener:
     build:
       context: .
@@ -24,6 +26,8 @@ services:
       CONSUMER_SECRET: ${CONSUMER_SECRET}
       ACCESS_TOKEN: ${ACCESS_TOKEN}
       ACCESS_SECRET: ${ACCESS_SECRET}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASS: ${POSTGRES_PASS}
       MIN_X: -180.0
       MAX_X: 180.0
       MIN_Y: -90.0
