@@ -1,14 +1,32 @@
 version: '2'
 
 services:
+  # gtm_postgis:
+  #   container_name: gtm_postgis
+  #   restart: unless-stopped
+  #   image: mdillon/postgis:11
+  #   volumes: 
+  #     - /data/gtm_postgis:/data/gtm_postgis
+  #   environment: 
+  #     POSTGRES_USER: ${POSTGRES_USER} 
   gtm_twitter_listener:
     build:
       context: .
       dockerfile: Dockerfile-Twitter_Listener      
+    image: twitter_listener 
     container_name: gtm_twitter_listener
     restart: unless-stopped    
     volumes:
       - /data/tweets:/data/tweets
-    environment: 
+    environment:
       TWEETS_OUPUT_FOLDER: '/data/tweets'
-    command: python forever.py retrieve_data_world.py
+      CONSUMER_KEY: ${CONSUMER_KEY}
+      CONSUMER_SECRET: ${CONSUMER_SECRET}
+      ACCESS_TOKEN: ${ACCESS_TOKEN}
+      ACCESS_SECRET: ${ACCESS_SECRET}
+      MIN_X: -180.0
+      MAX_X: 180.0
+      MIN_Y: -90.0
+      MAX_Y: 90.0
+      AREA_NAME: 'world'
+    command: python forever.py retrieve_data.py
