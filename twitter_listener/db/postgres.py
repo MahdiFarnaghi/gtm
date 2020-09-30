@@ -8,7 +8,7 @@ from sqlalchemy import Column
 from sqlalchemy import Integer, String, BigInteger, DateTime
 from sqlalchemy import MetaData
 from sqlalchemy import Table, select, func
-from sqlalchemy import create_engine, Numeric, Boolean, ForeignKey
+from sqlalchemy import create_engine, Numeric, Boolean, ForeignKey, Sequence
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.engine.url import URL
 from sqlalchemy.engine.url import make_url
@@ -65,6 +65,34 @@ class PostgresHandler:
         property_table = Table('db_properties', meta,
                                Column('key', String, primary_key=True),
                                Column('value', String))
+
+        event_detection_task_table = Table('event_detection_task', meta, 
+                                Column('id', BigInteger, Sequence('seq_event_detection_task_id')),
+                                Column('task_name', String(100)),
+                                Column('desc', String(500), nullable=True),
+                                Column('min_x', Numeric),
+                                Column('min_y', Numeric),
+                                Column('max_x', Numeric),
+                                Column('max_y', Numeric),
+                                Column('lang_code', String(2)),
+                                Column('interval_min', Integer)
+                                )
+
+                                min_x, min_y, max_x, max_y
+        meta.create_all()
+        property_table_sql_insert_version_1 = "INSERT INTO db_properties (key, value) " \
+                                              "VALUES ('version', '{}');".format(
+                                                  "1")
+        self.engine.execute(property_table_sql_insert_version_1)
+        # postgis_sql = 'CREATE EXTENSION postgis;'
+        # self.engine.execute(postgis_sql)
+        # postgis_topology_sql = 'CREATE EXTENSION postgis_topology;'
+        # self.engine.execute(postgis_topology_sql)
+        pass
+
+    def create_database_schema_version02(self):
+        meta = MetaData(self.engine)
+
         user_table = Table('twitter_user', meta,
                            Column('id', BigInteger, primary_key=True),
                            Column('name', String(50)),
@@ -122,17 +150,17 @@ class PostgresHandler:
                                         'tweet.id'), primary_key=True),
                                     Column('hashtag_id', Integer, ForeignKey('hashtag.id'), primary_key=True))
         meta.create_all()
-        property_table_sql_insert_version_1 = "INSERT INTO db_properties (key, value) " \
+        property_table_sql_insert_version_2 = "INSERT INTO db_properties (key, value) " \
                                               "VALUES ('version', '{}');".format(
-                                                  "1")
-        self.engine.execute(property_table_sql_insert_version_1)
+                                                  "2")
+        self.engine.execute(property_table_sql_insert_version_2)
         # postgis_sql = 'CREATE EXTENSION postgis;'
         # self.engine.execute(postgis_sql)
         # postgis_topology_sql = 'CREATE EXTENSION postgis_topology;'
         # self.engine.execute(postgis_topology_sql)
         pass
 
-    def create_database_schema_version02(self):
+    def create_database_schema_version03(self):
         update_tweet_table_1 = "ALTER TABLE tweet " \
                                "ADD tag varchar(100);"
         self.engine.execute(update_tweet_table_1)
@@ -145,11 +173,11 @@ class PostgresHandler:
                                "ADD hashtags_ varchar(300);"
         self.engine.execute(update_tweet_table_3)
 
-        property_table_sql_insert_version_2 = "UPDATE db_properties " \
+        property_table_sql_insert_version_3 = "UPDATE db_properties " \
                                               "SET value = '{}' " \
                                               "WHERE key ='version'; ".format(
-                                                  "2")
-        self.engine.execute(property_table_sql_insert_version_2)
+                                                  "3")
+        self.engine.execute(property_table_sql_insert_version_3)
         pass
 
     def load_schema(self):
@@ -184,6 +212,10 @@ class PostgresHandler:
             if db_version == 1:
                 self.create_database_schema_version02()
                 db_version = self.get_db_version()
+            if db_version == 2:
+                self.create_database_schema_version03()
+                db_version = self.get_db_version()
+
             # if db_version is None or db_version != self.expected_db_version:
             #     raise Exception(
             #         "Could not generate/upgrade the database to version {}".format(

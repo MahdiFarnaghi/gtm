@@ -27,6 +27,7 @@ dependencies:
     - cython
     - sentence_transformers
     - tqdm
+    - apscheduler
   - pytorch
   - geopandas=0.8.1
   - basemap
