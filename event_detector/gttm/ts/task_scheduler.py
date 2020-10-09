@@ -8,8 +8,9 @@ from pytz import utc
 
 class TaskScheduler:
     def __init__(self):
+        jobs_database_name = 'jobs.sqlite'
         jobstores = {
-            'default': SQLAlchemyJobStore(url='sqlite:///jobs.sqlite')
+            'default': SQLAlchemyJobStore(url=F'sqlite:///{jobs_database_name}')
         }
         executors = {
             'default': {'type': 'threadpool', 'max_workers': 20},
@@ -21,7 +22,21 @@ class TaskScheduler:
         }
         self.scheduler = BackgroundScheduler()
         self.scheduler.configure(
-            executors=executors, job_defaults=job_defaults, timezone=utc)
+            jobstores=jobstores,
+            executors=executors, 
+            job_defaults=job_defaults, 
+            timezone=utc)              
+
+    def get_task(self, task_id):
+        return self.scheduler.get_job(task_id)
+    
+    def get_tasks_ids(self):
+        task_ids = []
+        jobs = self.scheduler.get_jobs()
+        for j in jobs:
+            task_ids.append(j.id)
+        
+        return task_ids
 
     def start_scheduler(self):
         self.scheduler.start()

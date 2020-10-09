@@ -14,12 +14,10 @@ from sqlalchemy.engine.url import URL
 from sqlalchemy.engine.url import make_url
 from sqlalchemy.orm import Session
 
-from nlp import TextCleaner
-
 
 class PostgresHandler:
     min_acceptable_num_words_in_tweet = 4
-    expected_db_version = 2
+    expected_db_version = 3
 
     def __init__(self, DB_HOSTNAME, DB_PORT, DB_DATABASE, DB_USERNAME, DB_PASSWORD):
 
@@ -37,6 +35,7 @@ class PostgresHandler:
         self.table_twitter_user = None
         self.table_hashtag = None
         self.table_tweet_hashtag = None
+        self.table_event_detection_task = None
 
     def __del__(self):
         # if self.engine is not None:
@@ -66,28 +65,24 @@ class PostgresHandler:
                                Column('key', String, primary_key=True),
                                Column('value', String))
 
-        event_detection_task_table = Table('event_detection_task', meta, 
-                                Column('id', BigInteger, Sequence('seq_event_detection_task_id')),
-                                Column('task_name', String(100)),
-                                Column('desc', String(500), nullable=True),
-                                Column('min_x', Numeric),
-                                Column('min_y', Numeric),
-                                Column('max_x', Numeric),
-                                Column('max_y', Numeric),
-                                Column('lang_code', String(2)),
-                                Column('interval_min', Integer)
-                                )
-
-                                min_x, min_y, max_x, max_y
+        event_detection_task_table = Table('event_detection_task', meta,
+                                        #    Column('id', BigInteger, Sequence(
+                                        #        'seq_event_detection_task_id'), primary_key=True),
+                                           Column('task_name', String(100), nullable=False, primary_key=True),
+                                           Column('desc', String(
+                                               500), nullable=True),
+                                           Column('min_x', Numeric, nullable=False),
+                                           Column('min_y', Numeric, nullable=False),
+                                           Column('max_x', Numeric, nullable=False),
+                                           Column('max_y', Numeric, nullable=False),
+                                           Column('lang_code', String(2), nullable=False),
+                                           Column('interval_min', Integer, nullable=False)
+                                           )
         meta.create_all()
         property_table_sql_insert_version_1 = "INSERT INTO db_properties (key, value) " \
                                               "VALUES ('version', '{}');".format(
                                                   "1")
         self.engine.execute(property_table_sql_insert_version_1)
-        # postgis_sql = 'CREATE EXTENSION postgis;'
-        # self.engine.execute(postgis_sql)
-        # postgis_topology_sql = 'CREATE EXTENSION postgis_topology;'
-        # self.engine.execute(postgis_topology_sql)
         pass
 
     def create_database_schema_version02(self):
@@ -150,8 +145,9 @@ class PostgresHandler:
                                         'tweet.id'), primary_key=True),
                                     Column('hashtag_id', Integer, ForeignKey('hashtag.id'), primary_key=True))
         meta.create_all()
-        property_table_sql_insert_version_2 = "INSERT INTO db_properties (key, value) " \
-                                              "VALUES ('version', '{}');".format(
+        property_table_sql_insert_version_2 = "UPDATE db_properties " \
+                                              "SET value = '{}' " \
+                                              "WHERE key ='version'; ".format(
                                                   "2")
         self.engine.execute(property_table_sql_insert_version_2)
         # postgis_sql = 'CREATE EXTENSION postgis;'
@@ -190,6 +186,8 @@ class PostgresHandler:
                                    autoload_with=self.engine)
         self.table_tweet_hashtag = Table('tweet_hashtag', meta, autoload=True,
                                          autoload_with=self.engine)
+        self.table_event_detection_task = Table('event_detection_task', meta, autoload=True,
+                                          autoload_with=self.engine)
 
     def check_db(self):
         if not self.db_is_checked:
@@ -228,6 +226,5 @@ class PostgresHandler:
                                                                                                        PostgresHandler.expected_db_version))
 
         return self.db_is_checked
-    
 
-    
+

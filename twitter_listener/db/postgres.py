@@ -78,7 +78,6 @@ class PostgresHandler:
                                 Column('interval_min', Integer)
                                 )
 
-                                min_x, min_y, max_x, max_y
         meta.create_all()
         property_table_sql_insert_version_1 = "INSERT INTO db_properties (key, value) " \
                                               "VALUES ('version', '{}');".format(
