@@ -61,6 +61,7 @@ if save_data_mode == 'DB':
     print(F"Database status: {postgres.check_db()}")
     print('Checking the database was finished.')
     print(60*"*")
+    
 
 api = tweepy.API(auth)
 print(60*"*")
@@ -73,4 +74,3 @@ WorldStreamListener = TwitterStreamListener()
 WorldStreamListener.init(area_name=area_name,  output_folder=output_folder, postgres=postgres, save_data_mode=save_data_mode)
 WorldStream = Stream(auth, WorldStreamListener)
 WorldStream.filter(locations=[min_x, min_y, max_x, max_y])
-
