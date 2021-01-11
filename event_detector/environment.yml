@@ -5,12 +5,9 @@ channels:
 dependencies:
   - python=3.7
   - python-dotenv
-  - jupyter
   - pip
   - pip:
-    - tensorflow
-    - jupyter
-    - numpy
+    - numpy==1.19.0
     - pandas
     - scipy==1.5.2
     - scikit-learn==0.23.2
@@ -28,7 +25,6 @@ dependencies:
     - sentence_transformers
     - tqdm
     - apscheduler
-  - pytorch
   - geopandas=0.8.1
   - basemap
   - basemap-data-hires

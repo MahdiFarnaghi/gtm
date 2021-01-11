@@ -23,6 +23,8 @@ min_x = float(os.getenv('MIN_X')) if os.getenv('MIN_X') is not None else 0
 max_x = float(os.getenv('MAX_X')) if os.getenv('MAX_X') is not None else 0
 min_y = float(os.getenv('MIN_Y')) if os.getenv('MIN_Y') is not None else 0
 max_y = float(os.getenv('MAX_Y')) if os.getenv('MAX_Y') is not None else 0
+if not (min_x != 0 and max_x != 0 and min_y != 0 and max_y != 0):
+    raise Exception("The bounding box for which the tweets should be saved is not provided.")
 area_name = os.getenv('AREA_NAME')
 db_hostname = os.getenv('DB_HOSTNAME')
 db_port = os.getenv('DB_PORT')
@@ -71,3 +73,4 @@ WorldStreamListener = TwitterStreamListener()
 WorldStreamListener.init(area_name=area_name,  output_folder=output_folder, postgres=postgres, save_data_mode=save_data_mode)
 WorldStream = Stream(auth, WorldStreamListener)
 WorldStream.filter(locations=[min_x, min_y, max_x, max_y])
+

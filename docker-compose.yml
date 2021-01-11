@@ -15,7 +15,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile-Event_Detector      
-    image: twitter_listener 
+    image: event_detector
     container_name: gtm_event_detector
     volumes:
       - /data/processing:/data/processing

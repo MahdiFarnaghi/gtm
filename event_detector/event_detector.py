@@ -55,6 +55,7 @@ def execute_event_detection_procedure(process_name, min_x, min_y, max_x, max_y, 
 
 
 if __name__ == '__main__':
-    load_dotenv()
-    event_detector = EventDetector()
-    event_detector.run()
+    # load_dotenv()
+    # event_detector = EventDetector()
+    # event_detector.run()
+    execute_event_detection_procedure('test', )

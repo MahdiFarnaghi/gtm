@@ -19,7 +19,7 @@ from nlp import TextCleaner
 
 class PostgresHandler:
     min_acceptable_num_words_in_tweet = 4
-    expected_db_version = 2
+    expected_db_version = 3
 
     def __init__(self, DB_HOSTNAME, DB_PORT, DB_DATABASE, DB_USERNAME, DB_PASSWORD):
 
@@ -149,10 +149,18 @@ class PostgresHandler:
                                         'tweet.id'), primary_key=True),
                                     Column('hashtag_id', Integer, ForeignKey('hashtag.id'), primary_key=True))
         meta.create_all()
-        property_table_sql_insert_version_2 = "INSERT INTO db_properties (key, value) " \
-                                              "VALUES ('version', '{}');".format(
+
+        # property_table_sql_insert_version_2 = "INSERT INTO db_properties (key, value) " \
+        #                                       "VALUES ('version', '{}');".format(
+        #                                           "2")
+        # self.engine.execute(property_table_sql_insert_version_2)
+
+        property_table_sql_insert_version_2 = "UPDATE db_properties " \
+                                              "SET value = '{}' " \
+                                              "WHERE key ='version'; ".format(
                                                   "2")
         self.engine.execute(property_table_sql_insert_version_2)
+
         # postgis_sql = 'CREATE EXTENSION postgis;'
         # self.engine.execute(postgis_sql)
         # postgis_topology_sql = 'CREATE EXTENSION postgis_topology;'
