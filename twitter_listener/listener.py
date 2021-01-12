@@ -8,7 +8,7 @@ import json
 import sys
 import traceback
 import logging
-from db.postgres import PostgresHandler
+from gttm.db.postgres_tweet import PostgresHandler_Tweets
 
 # parse data
 
@@ -83,18 +83,16 @@ class TwitterStreamListener(StreamListener):
         print("----------------------")
         print(F"{save_data_mode}: {str(geotweetnumber)} tweet saved out of {str(tweetnumber)}, at " +
                dt.strftime("%Y%m%d-%H:%M:%S"))
-        print(self.postgres.number_of_tweets())
+        # print(self.postgres.number_of_tweets())
         print("----------------------")
 
     def on_error(self, status):
         # print(status)
         return True
 
-    def init(self,  area_name: str, output_folder: str, postgres: PostgresHandler, save_data_mode='FILE', save_geotweets=True):
-        print('+++++++++++++++++++++++++++++++++++++++++++++++++++++++')
-        print('Saving geotagged tweets in ' + area_name + ' started')
-        print('+++++++++++++++++++++++++++++++++++++++++++++++++++++++')
-        print('\n')
+    def init(self,  area_name: str, output_folder: str, postgres: PostgresHandler_Tweets, save_data_mode='FILE', save_geotweets=True):
+        print("Intializing Twitter's listener object.")
+
 
         #self.minx = minX
         #self.maxx = maxX
@@ -120,3 +118,8 @@ class TwitterStreamListener(StreamListener):
             raise Exception(
                 F'The specified save_data_mode ({self.save_data_mode}) is not supported.')
         # self.logger = logging.getLogger(self.output_folder + os.sep + 'log')
+        print('Initialization was successful.\n\n\n')
+        print('+++++++++++++++++++++++++++++++++++++++++++++++++++++++')
+        print('Saving geotagged tweets in ' + area_name + ' started')
+        print('+++++++++++++++++++++++++++++++++++++++++++++++++++++++')
+        print('\n')

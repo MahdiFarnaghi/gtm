@@ -1,3 +1,4 @@
+from gttm.db.postgres_tweet import PostgresHandler_Tweets
 from listener import TwitterStreamListener
 import tweepy
 from tweepy import OAuthHandler
@@ -7,7 +8,6 @@ import datetime
 import os
 import json
 from dotenv import load_dotenv
-from db.postgres import PostgresHandler
 
 load_dotenv()
 
@@ -23,14 +23,17 @@ min_x = float(os.getenv('MIN_X')) if os.getenv('MIN_X') is not None else 0
 max_x = float(os.getenv('MAX_X')) if os.getenv('MAX_X') is not None else 0
 min_y = float(os.getenv('MIN_Y')) if os.getenv('MIN_Y') is not None else 0
 max_y = float(os.getenv('MAX_Y')) if os.getenv('MAX_Y') is not None else 0
-if not (min_x != 0 and max_x != 0 and min_y != 0 and max_y != 0):
-    raise Exception("The bounding box for which the tweets should be saved is not provided.")
 area_name = os.getenv('AREA_NAME')
 db_hostname = os.getenv('DB_HOSTNAME')
 db_port = os.getenv('DB_PORT')
 db_user = os.getenv('DB_USER')
 db_pass = os.getenv('DB_PASS')
 db_database = os.getenv('DB_DATABASE')
+languages = os.getenv('LANGUAGES')
+if languages != '':
+    languages = str(languages).split(',')
+else:
+    languages = []
 # print(60*"*")
 # print("consumer_key: " + consumer_key)
 # print("consumer_secret: " + consumer_secret)
@@ -54,14 +57,13 @@ print('Authenication was finished!')
 
 postgres = None
 if save_data_mode == 'DB':
-    postgres = PostgresHandler(
+    postgres = PostgresHandler_Tweets(
         db_hostname, db_port, db_database, db_user, db_pass)
     print(60*"*")
     print('Checking the database ...')
     print(F"Database status: {postgres.check_db()}")
     print('Checking the database was finished.')
     print(60*"*")
-    
 
 api = tweepy.API(auth)
 print(60*"*")
@@ -73,4 +75,4 @@ print('Initializing the listener ...')
 WorldStreamListener = TwitterStreamListener()
 WorldStreamListener.init(area_name=area_name,  output_folder=output_folder, postgres=postgres, save_data_mode=save_data_mode)
 WorldStream = Stream(auth, WorldStreamListener)
-WorldStream.filter(locations=[min_x, min_y, max_x, max_y])
+WorldStream.filter(languages= languages if len(languages) > 0 else None,locations=[min_x, min_y, max_x, max_y])

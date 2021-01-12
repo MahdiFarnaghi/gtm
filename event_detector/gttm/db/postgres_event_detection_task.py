@@ -1,4 +1,4 @@
-from db.postgres import PostgresHandler
+from gttm.db.postgres import PostgresHandler
 import json
 from copy import copy
 from datetime import datetime
@@ -34,6 +34,7 @@ class PostgresHandler_EventDetectionTask(PostgresHandler):
                     'min_y': row['min_y'],
                     'max_x': row['max_x'],
                     'max_y': row['max_y'],
+                    'look_back': row['look_back'],
                     'lang_code': row['lang_code'],
                     'interval_min': row['interval_min']}
             )
@@ -48,7 +49,7 @@ class PostgresHandler_EventDetectionTask(PostgresHandler):
         self.engine.execute(self.table_event_detection_task.delete().where(
             self.table_event_detection_task.c.task_name == task_name))
 
-    def insert_event_detection_task(self, task_name, desc: str, min_x, min_y, max_x, max_y, lang_code, interval_min, force_insert=False) -> bool:
+    def insert_event_detection_task(self, task_name, desc: str, min_x, min_y, max_x, max_y, look_back, lang_code, interval_min, force_insert=False) -> bool:
         self.check_db()
 
         ins = pg_insert(self.table_event_detection_task).values(
@@ -58,6 +59,7 @@ class PostgresHandler_EventDetectionTask(PostgresHandler):
             min_y=min_y,
             max_x=max_x,
             max_y=max_y,
+            look_back=look_back,
             lang_code=lang_code,
             interval_min=interval_min)
         if force_insert:
@@ -70,11 +72,13 @@ class PostgresHandler_EventDetectionTask(PostgresHandler):
                     min_y=min_y,
                     max_x=max_x,
                     max_y=max_y,
+                    look_back=look_back,
                     lang_code=lang_code,
-                    interval_min=interval_min
-                )
+                    interval_min=interval_min)
             )
         else:
+            ins = ins.on_conflict_do_nothing(
+                index_elements=['task_id'])
             ins = ins.on_conflict_do_nothing(
                 index_elements=['task_name'])
         res = self.engine.execute(ins)

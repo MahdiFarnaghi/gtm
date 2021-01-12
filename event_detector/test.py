@@ -15,15 +15,21 @@ postgres = PostgresHandler_EventDetectionTask(
     os.getenv('DB_USER'),
     os.getenv('DB_PASS'))
 
+delay = 10
 postgres.delete_event_detection_tasks()
-postgres.insert_event_detection_task('task 1 in sweden', 'desc ...', 1, 2, 3, 4, 'sv', 5, False)
-sleep(90)
-postgres.insert_event_detection_task('task 2 in eng', 'desc ...', 1, 2, 3, 4, 'en', 5, False)
-sleep(90)
-postgres.delete_event_detection_task('task 1 in sweden')
-sleep(90)
-postgres.insert_event_detection_task('task 3 in sweden', 'desc ...', 1, 2, 3, 4, 'sv', 5, False)
-
+postgres.insert_event_detection_task('task 1 in sweden', 'desc ...', -180, -90, 180, 90, 120, 'sv', 5, False)
+print('Inserted')
+# postgres.insert_event_detection_task('task 1 in sweden', 'desc ...', 1, 2, 3, 4, 'sv', 5, False)
+# print('Inserted')
+# sleep(delay)
+# postgres.insert_event_detection_task('task 2 in eng', 'desc ...', 1, 2, 3, 4, 'en', 5, False)
+# print('Inserted')
+# sleep(delay)
+# postgres.delete_event_detection_task('task 1 in sweden')
+# print('Deleted')
+# sleep(delay)
+# postgres.insert_event_detection_task('task 3 in sweden', 'desc ...', 1, 2, 3, 4, 'sv', 5, False)
+# print('Inserted')
 # tasks = postgres.get_tasks()
 # [print(F"Taks name: {t['task_name']}, Min X: {t['min_x']}") for t in tasks]
 

@@ -15,7 +15,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile-Event_Detector      
-    image: event_detector
+    image: twitter_listener 
     container_name: gtm_event_detector
     volumes:
       - /data/processing:/data/processing
@@ -26,31 +26,31 @@ services:
       DB_PASS: ${POSTGRES_PASS}
       DB_DATABASE: tweets_db    
     command: conda run -n gtm python main.py
-  # gtm_twitter_listener:
-  #   build:
-  #     context: .
-  #     dockerfile: Dockerfile-Twitter_Listener      
-  #   image: twitter_listener 
-  #   container_name: gtm_twitter_listener
-  #   restart: unless-stopped    
-  #   volumes:
-  #     - /data/tweets:/data/tweets
-  #   environment:
-  #     SAVE_DATA_MODE: 'DB' # DB or FILE
-  #     TWEETS_OUPUT_FOLDER: '/data/tweets'
-  #     CONSUMER_KEY: ${CONSUMER_KEY}
-  #     CONSUMER_SECRET: ${CONSUMER_SECRET}
-  #     ACCESS_TOKEN: ${ACCESS_TOKEN}
-  #     ACCESS_SECRET: ${ACCESS_SECRET}
-  #     DB_HOSTNAME: gtm_postgis
-  #     DB_PORT: 5432  
-  #     DB_USER: ${POSTGRES_USER}
-  #     DB_PASS: ${POSTGRES_PASS}
-  #     DB_DATABASE: tweets_db
-  #     # DB_REBUILD: 'False'
-  #     MIN_X: -180.0
-  #     MAX_X: 180.0
-  #     MIN_Y: -90.0
-  #     MAX_Y: 90.0
-  #     AREA_NAME: 'world'
-  #   command: python forever.py retrieve_data.py
+  gtm_twitter_listener:
+    build:
+      context: .
+      dockerfile: Dockerfile-Twitter_Listener      
+    image: twitter_listener 
+    container_name: gtm_twitter_listener
+    restart: unless-stopped    
+    volumes:
+      - /data/tweets:/data/tweets
+    environment:
+      SAVE_DATA_MODE: 'DB' # DB or FILE
+      TWEETS_OUPUT_FOLDER: '/data/tweets'
+      CONSUMER_KEY: ${CONSUMER_KEY}
+      CONSUMER_SECRET: ${CONSUMER_SECRET}
+      ACCESS_TOKEN: ${ACCESS_TOKEN}
+      ACCESS_SECRET: ${ACCESS_SECRET}
+      DB_HOSTNAME: gtm_postgis
+      DB_PORT: 5432  
+      DB_USER: ${POSTGRES_USER}
+      DB_PASS: ${POSTGRES_PASS}
+      DB_DATABASE: tweets_db
+      # DB_REBUILD: 'False'
+      MIN_X: -180.0
+      MAX_X: 180.0
+      MIN_Y: -90.0
+      MAX_Y: 90.0
+      AREA_NAME: 'world'
+    command: python forever.py retrieve_data.py
