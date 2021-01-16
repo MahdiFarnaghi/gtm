@@ -1,9 +1,6 @@
-from gensim.models import KeyedVectors, FastText
 import numpy as np
 import os
 import sys
-from gensim.scripts.glove2word2vec import glove2word2vec
-from gensim.test.utils import datapath, get_tmpfile
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 from datetime import datetime, timedelta
 import requests
@@ -22,8 +19,6 @@ FASTTEXT_FOLDER_PATH = os.getenv('FASTTEXT_FOLDER_PATH')
 
 # https://fasttext.cc/
 
-# TODO: If gensim is not used in other parts of the project, it should be removed from the requirements.yml
-
 
 class VectorizerUtil_FastText:
 
@@ -36,7 +31,7 @@ class VectorizerUtil_FastText:
     # def get_model_url(self, lang):
     #     return F"https://dl.fbaipublicfiles.com/fasttext/vectors-crawl/cc.{lang}.300.bin.gz"
 
-    def vectorize(self, sentences, lang):
+    def vectorize(self, sentences, lang) -> np.array:
         model = self.get_model(lang)
         return np.array([model.get_sentence_vector(sent) for sent in sentences])
 

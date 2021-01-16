@@ -7,6 +7,8 @@ from dotenv import load_dotenv
 from datetime import datetime, timedelta
 from gttm.db.postgres_tweet import PostgresHandler_Tweets
 from gttm.nlp import VectorizerUtil_FastText
+from gttm.ioie.geodata import add_geometry
+import numpy as np
 
 
 
@@ -67,24 +69,43 @@ vectorizer = VectorizerUtil_FastText()
 def execute_event_detection_procedure(process_name, min_x, min_y, max_x, max_y, look_back_hours: int, lang_code):
     print(F"Process: {process_name}, Language: {lang_code}")
     
-    global postgres
+    global postgres, vectorizer
 
     end_date = datetime.now()
     start_date = end_date - timedelta(hours=int(look_back_hours))
 
     # Read data from database
+    print("1. Read data from database.")    
     df, num = postgres.read_data_from_postgres(
         start_date=start_date,
         end_date=end_date,
         min_x=min_x,
         min_y=min_y,
         max_x=max_x,
-        max_y=max_y)
+        max_y=max_y,
+        lang=lang_code)
     
+    if num <= 0:
+        print('There was no record for processing.')
+        return
     print(F"Number of retrieved tweets: {num}")
 
+    # convert to geodataframe
+    print("2. convert to GeoDataFrame")
+    gdf = add_geometry(df) 
+
+    # get location vectors
+    print("3. Get location vectors")
+    x = np.asarray(gdf.geometry.x)[:, np.newaxis]
+    y = np.asarray(gdf.geometry.y)[:, np.newaxis]
+
+    #TODO: Get time vector. Time vector should be in days format
+
     # Vectorzie text
-    text_vect = vectorizer.vectorize(df.c.values, lang_code)
+    print("5. Get text vector")
+    # text_vect = vectorizer.vectorize(df.c.values, lang_code)
+    # print(F"Shape of the vectorized tweets: {text_vect.shape}")
+
 
     
 
@@ -94,6 +115,6 @@ if __name__ == '__main__':
     load_dotenv()
     # event_detector = EventDetector()
     # event_detector.run()
-    execute_event_detection_procedure('test', -180, -90, 180, 90, 36, 'en')
+    execute_event_detection_procedure('test', -180, -90, 180, 90, 100, 'en')
 
 #TODO: Add prepare mathod to download everythings, including fasttext files before the main task

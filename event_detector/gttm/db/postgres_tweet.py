@@ -23,7 +23,7 @@ class PostgresHandler_Tweets(PostgresHandler):
         super().__init__(DB_HOSTNAME, DB_PORT, DB_DATABASE,
                          DB_USERNAME, DB_PASSWORD)
 
-    def read_data_from_postgres(self, start_date: datetime, end_date: datetime, min_x, min_y, max_x, max_y, table_name='tweet', tag='', verbose=False):
+    def read_data_from_postgres(self, start_date: datetime, end_date: datetime, min_x, min_y, max_x, max_y, table_name='tweet', tag='', verbose=False, lang=None):
         # todo: check if the table exists and catch any error
         if verbose:
             print('\tStart reading data ...')
@@ -43,6 +43,9 @@ class PostgresHandler_Tweets(PostgresHandler):
 
         if tag != '':
             sql = sql + " AND tag=\'{}\'".format(tag)
+        
+        if lang is not None:
+            sql = sql + F" AND lang=\'{lang}\' "
 
         self.check_db()
 

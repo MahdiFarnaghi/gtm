@@ -20,6 +20,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics import euclidean_distances, silhouette_score, pairwise_distances
 from sklearn.metrics.pairwise import cosine_distances
 from gttm.mathematics import math_func
+from gttm.ioie.geodata import add_geometry
 
 
 class ClusterHandler:
