@@ -86,7 +86,7 @@ def execute_event_detection_procedure(process_name, min_x, min_y, max_x, max_y, 
     # Vectorzie text
     text_vect = vectorizer.vectorize(df.c.values, lang_code)
 
-    print(F"Shape of the vectorize text: {text_vect.shape}")
+    
 
     
 
