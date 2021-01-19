@@ -106,8 +106,7 @@ def execute_event_detection_procedure(process_name, min_x, min_y, max_x, max_y, 
     # text_vect = vectorizer.vectorize(df.c.values, lang_code)
     # print(F"Shape of the vectorized tweets: {text_vect.shape}")
 
-
-    
+    #TODO: extract clusters first textually and then based on location and time    
 
     
 
