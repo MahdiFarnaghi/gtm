@@ -1,6 +1,6 @@
 import sys
 import os
-from time import sleep
+from time import sleep, time
 from gttm.ts.task_scheduler import TaskScheduler
 from gttm.db.postgres_event_detection_task import PostgresHandler_EventDetectionTask
 from dotenv import load_dotenv
@@ -8,8 +8,12 @@ from datetime import datetime, timedelta
 from gttm.db.postgres_tweet import PostgresHandler_Tweets
 from gttm.nlp import VectorizerUtil_FastText
 from gttm.ioie.geodata import add_geometry
+from gttm.nlp.identify_topic import HDPTopicIdentification
 import numpy as np
-
+import pandas as pd
+from sklearn.cluster import OPTICS
+from sklearn.metrics.pairwise import cosine_distances
+import math
 
 
 class EventDetector:
@@ -63,19 +67,23 @@ db_user = os.getenv('DB_USER')
 db_pass = os.getenv('DB_PASS')
 db_database = os.getenv('DB_DATABASE')
 
-postgres = PostgresHandler_Tweets(db_hostname, db_port, db_database, db_user, db_pass)
+postgres = PostgresHandler_Tweets(
+    db_hostname, db_port, db_database, db_user, db_pass)
 vectorizer = VectorizerUtil_FastText()
 
-def execute_event_detection_procedure(process_name, min_x, min_y, max_x, max_y, look_back_hours: int, lang_code):
+
+def execute_event_detection_procedure(process_name, min_x, min_y, max_x, max_y, look_back_hours: int, lang_code,
+                                      min_cluster_size=10, verbose=False):
+
     print(F"Process: {process_name}, Language: {lang_code}")
-    
+
     global postgres, vectorizer
 
     end_date = datetime.now()
     start_date = end_date - timedelta(hours=int(look_back_hours))
 
     # Read data from database
-    print("1. Read data from database.")    
+    print("1. Read data from database.")
     df, num = postgres.read_data_from_postgres(
         start_date=start_date,
         end_date=end_date,
@@ -84,36 +92,71 @@ def execute_event_detection_procedure(process_name, min_x, min_y, max_x, max_y, 
         max_x=max_x,
         max_y=max_y,
         lang=lang_code)
-    
+
     if num <= 0:
         print('There was no record for processing.')
         return
-    print(F"Number of retrieved tweets: {num}")
+    if verbose:
+        print(F"Number of retrieved tweets: {num}")
 
     # convert to geodataframe
     print("2. convert to GeoDataFrame")
-    gdf = add_geometry(df) 
+    gdf = add_geometry(df)
 
     # get location vectors
     print("3. Get location vectors")
     x = np.asarray(gdf.geometry.x)[:, np.newaxis]
     y = np.asarray(gdf.geometry.y)[:, np.newaxis]
 
-    #TODO: Get time vector. Time vector should be in days format
+    # get time vector
+    print("4. get time vector")
+    t = np.asarray(gdf.created_at.dt.year * 365.2425 + gdf.created_at.dt.day)
 
     # Vectorzie text
     print("5. Get text vector")
-    # text_vect = vectorizer.vectorize(df.c.values, lang_code)
+    text_vect = vectorizer.vectorize(df.c.values, lang_code)
     # print(F"Shape of the vectorized tweets: {text_vect.shape}")
 
-    #TODO: extract clusters first textually and then based on location and time    
+    # Text-based clustering
+    print("6. Clustering - First-level: Text-based")
+    start_time = time()
+    optics_ = OPTICS(
+        min_cluster_size=min_cluster_size,
+        metric='precomputed')
+    text_dist = np.absolute(cosine_distances(text_vect))
+    optics_.fit(text_dist)
+    time_taken = time() - start_time
+    labels = optics_.labels_
+    label_codes = np.unique(labels)
+    num_of_clusters = len(label_codes[label_codes >= 0])
+    if verbose:
+        print(F'\tNumber of clusters: {num_of_clusters - 1}')
+        print('\tClustering embeddings using OPTICS. Done!')
+        print(F"\tTime: {math.ceil(time_taken)} seconds")
 
-    
+    # topic identification
+    print("7. Identify topics")
+    identTopic = HDPTopicIdentification()
+    identTopic.identify_topics(labels, df.c.values)
+    if verbose:
+        identTopic.print_cluster_topics()
+    topics = identTopic.get_cluster_topics()
+
+    #TODO: 8. Clustering - Second-level: Spatiotemporal
+    print("8. Clustering - Second-level: Spatiotemporal")
+
+    #TODO: 9. Link clusters
+    print("9. Link clusters")
+
+    #TODO: 10. Save clusters
+    print("10. Save clusters")
+
+
+
 
 if __name__ == '__main__':
     load_dotenv()
     # event_detector = EventDetector()
     # event_detector.run()
-    execute_event_detection_procedure('test', -180, -90, 180, 90, 100, 'en')
+    execute_event_detection_procedure('test', -180, -90, 180, 90, 500, 'en', verbose=True)
 
-#TODO: Add prepare mathod to download everythings, including fasttext files before the main task

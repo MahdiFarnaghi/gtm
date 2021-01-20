@@ -3,8 +3,8 @@ from datetime import datetime
 
 import numpy as np
 from pathlib import Path
-from mpl_toolkits.basemap import Basemap
-from mpl_toolkits.mplot3d import Axes3D
+# from mpl_toolkits.basemap import Basemap
+# from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 from shapely.geometry import Point
 from geopandas import GeoDataFrame
@@ -60,13 +60,13 @@ def project(gdf: GeoDataFrame, crs=None):
     return gdf
 
 
-def show_wms():
-    map = Basemap(llcrnrlon=8.35, llcrnrlat=41.225, urcrnrlon=10.01, urcrnrlat=43.108,
-                  projection='cyl', epsg=4326)
+# def show_wms():
+#     map = Basemap(llcrnrlon=8.35, llcrnrlat=41.225, urcrnrlon=10.01, urcrnrlat=43.108,
+#                   projection='cyl', epsg=4326)
 
-    wms_server = "http://www.ga.gov.au/gis/services/topography/Australian_Topography/MapServer/WMSServer"
-    wms_server = "http://wms.geosignal.fr/metropole?"
+#     wms_server = "http://www.ga.gov.au/gis/services/topography/Australian_Topography/MapServer/WMSServer"
+#     wms_server = "http://wms.geosignal.fr/metropole?"
 
-    map.wmsimage(wms_server, layers=[
-        "Communes", "Nationales", "Regions"], verbose=True)
-    plt.show()
+#     map.wmsimage(wms_server, layers=[
+#         "Communes", "Nationales", "Regions"], verbose=True)
+#     plt.show()

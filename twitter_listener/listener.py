@@ -51,6 +51,7 @@ class TwitterStreamListener(StreamListener):
 
             if self.save_data_mode == 'DB':
                 self.geotweetnumber += 1
+                #TODO: Maybe a flush mechanism should be used here
                 if self.postgres.upsert_tweet(data):
                     self.write_tweet_saved(
                         self.geotweetnumber, self.tweetnumber, self.save_data_mode, now)
