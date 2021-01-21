@@ -1,4 +1,5 @@
 FROM continuumio/miniconda:4.7.12
+RUN apt-get install g++
 RUN mkdir -p /code
 RUN mkdir -p /data/processing
 COPY event_detector /code/event_detector
