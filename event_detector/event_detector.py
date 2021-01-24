@@ -12,7 +12,7 @@ from gttm.nlp.identify_topic import HDPTopicIdentification
 import numpy as np
 import pandas as pd
 from sklearn.cluster import OPTICS
-from sklearn.metrics.pairwise import cosine_distances
+from sklearn.metrics.pairwise import cosine_distances, euclidean_distances
 import math
 
 
@@ -126,24 +126,41 @@ def execute_event_detection_procedure(process_name, min_x, min_y, max_x, max_y, 
     text_dist = np.absolute(cosine_distances(text_vect))
     optics_.fit(text_dist)
     time_taken = time() - start_time
-    labels = optics_.labels_
-    label_codes = np.unique(labels)
-    num_of_clusters = len(label_codes[label_codes >= 0])
+    txt_clust_labels = optics_.labels_
+    txt_clust_label_codes = np.unique(txt_clust_labels)
+    num_of_clusters = len(txt_clust_label_codes[txt_clust_label_codes >= 0])
     if verbose:
         print(F'\tNumber of clusters: {num_of_clusters - 1}')
-        print('\tClustering embeddings using OPTICS. Done!')
         print(F"\tTime: {math.ceil(time_taken)} seconds")
 
     # topic identification
     print("7. Identify topics")
+    #TODO: We need to specify the maximum number of tweets enter into the clustering procedures
     identTopic = HDPTopicIdentification()
-    identTopic.identify_topics(labels, df.c.values)
+    identTopic.identify_topics(txt_clust_labels, df.c.values)
     if verbose:
         identTopic.print_cluster_topics()
     topics = identTopic.get_cluster_topics()
 
     #TODO: 8. Clustering - Second-level: Spatiotemporal
     print("8. Clustering - Second-level: Spatiotemporal")
+    for label in txt_clust_label_codes:
+        if label >= 0:
+            start_time = time()
+            optics_ = OPTICS(
+                min_cluster_size=min_cluster_size,
+                metric='precomputed')
+            st_vect = zip(x[txt_clust_labels==label], y[txt_clust_labels==label]) #TODO: Should I include time?
+            st_dist = euclidean_distances(st_vect)
+            optics_.fit(st_dist)
+            time_taken = time() - start_time
+            st_clust_labels = optics_.labels_
+            st_clust_label_codes = np.unique(txt_clust_labels)
+            num_of_clusters = len(txt_clust_label_codes[txt_clust_label_codes >= 0])
+            if verbose:
+                print(F'\tNumber of clusters for label {label}: {num_of_clusters - 1}')
+                print(F"\tTime: {math.ceil(time_taken)} seconds")
+
 
     #TODO: 9. Link clusters
     print("9. Link clusters")

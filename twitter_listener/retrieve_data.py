@@ -7,6 +7,8 @@ from tweepy.streaming import StreamListener
 import datetime
 import os
 import json
+import traceback
+import sys
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -61,7 +63,17 @@ if save_data_mode == 'DB':
         db_hostname, db_port, db_database, db_user, db_pass)
     print(60*"*")
     print('Checking the database ...')
-    print(F"Database status: {postgres.check_db()}")
+    try:
+      print(F"Database status: {postgres.check_db()}")    
+    except:
+      print('Database is not accessible!')
+      print('-' * 60)
+      print("Unexpected error:", sys.exc_info()[0])
+      print('-' * 60)
+      traceback.print_exc(file=sys.stdout)      
+      print('-' * 60)
+      sys.exit(2)
+
     print('Checking the database was finished.')
     print(60*"*")
 
