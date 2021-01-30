@@ -201,7 +201,7 @@ class PostgresHandler:
     def check_db(self):
         if not self.db_is_checked:
             self.engine = create_engine(
-                self.db_url, isolation_level="AUTOCOMMIT", pool_size=10, max_overflow=0)
+                self.db_url, isolation_level="AUTOCOMMIT", pool_size=10, max_overflow=20)
 
             if not sqlalchemy_utils.functions.database_exists(self.db_url):
                 url = copy(make_url(self.db_url))

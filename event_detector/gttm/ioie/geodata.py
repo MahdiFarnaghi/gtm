@@ -27,6 +27,9 @@ def get_default_srid():
 def get_default_crs():
     return default_crs
 
+def get_wgs84_crs():
+    {'init': 'epsg:{}'.format(4326)}
+    
 
 def add_geometry(df: pd.DataFrame, study_area: shapely.geometry.box = None, crs=default_crs, verbose=False):
     if verbose:
