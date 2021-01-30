@@ -794,7 +794,6 @@ class PostgresHandler_EventDetection(PostgresHandler):
         # return res.rowcount > 0
 
     def insert_clusters(self, clusters: list):
-
         for cluster in clusters:
             if cluster['id'] is None:
                 clust = cluster.copy()
@@ -803,7 +802,7 @@ class PostgresHandler_EventDetection(PostgresHandler):
                 ins = pg_insert(self.table_cluster).on_conflict_do_nothing(
                     index_elements=['id']).values(clust)
                 res = self.engine.execute(ins)
-                clust_id = res.lastrowid
+                clust_id = res.inserted_primary_key[0]
                 if clust_id is not None:
                     for i in range(len(points)):
                         points[i]["cluster_id"] = clust_id

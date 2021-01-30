@@ -1,6 +1,7 @@
 import sys
 import os
 from time import sleep, time
+from numpy.lib.type_check import asscalar
 
 from sqlalchemy.sql.operators import exists
 from gttm.ts.task_scheduler import TaskScheduler
@@ -72,7 +73,11 @@ db_database = os.getenv('DB_DATABASE')
 
 postgres_tweets = PostgresHandler_Tweets(
     db_hostname, db_port, db_database, db_user, db_pass)
+postgres_tweets.check_db()
 
+postgres_events = PostgresHandler_EventDetection(
+    db_hostname, db_port, db_database, db_user, db_pass)
+postgres_events.check_db()
 
 vectorizer = VectorizerUtil_FastText()
 
@@ -82,7 +87,7 @@ def execute_event_detection_procedure(task_id: int, task_name: str, min_x, min_y
 
     print(F"Process: {task_name} ({task_id}), Language: {lang_code}")
 
-    global postgres_tweets, vectorizer
+    global postgres_tweets, postgres_events, vectorizer
 
     end_date = datetime.now()
     start_date = end_date - timedelta(hours=int(look_back_hours))
@@ -116,8 +121,8 @@ def execute_event_detection_procedure(task_id: int, task_name: str, min_x, min_y
     # get time vector
     print("4. get time vector")
     t = np.asarray(gdf.created_at.dt.year * 365.2425 + gdf.created_at.dt.day)
-    date_time = gdf.created_at.to_numpy(dtype=np.datetime64)
-
+    date_time = gdf.created_at.dt.to_pydatetime()
+    
     # Vectorzie text
     print("5. Get text vector")
     clean_text = df.c.values
@@ -198,10 +203,10 @@ def execute_event_detection_procedure(task_id: int, task_name: str, min_x, min_y
             for l in st_clust_label_codes[st_clust_label_codes >= 0]:
                 topic = topics[label][3]
                 topic_words = topics[label][4]
-                points_text = _text[st_clust_labels == l]
+                points_text = _text[st_clust_labels == l].tolist()
                 points_x = _x[st_clust_labels == l]
                 points_y = _y[st_clust_labels == l]
-                points_date_time = _date_time[st_clust_labels == l]
+                points_date_time = _date_time[st_clust_labels == l].tolist()
                 lat_min = np.min(points_y)
                 lat_max = np.max(points_y)
                 lon_min = np.min(points_x)
@@ -216,7 +221,11 @@ def execute_event_detection_procedure(task_id: int, task_name: str, min_x, min_y
                     'lat_max': lat_max,
                     'lon_min': lon_min,
                     'lon_max': lon_max,
-                    'points': [{'cluster_id': None, 'longitude': xx, 'latitude': yy, 'text': tt, 'date_time': dd.astype(datetime)} for xx, yy, tt, dd in zip(points_x, points_y, points_text, points_date_time)]
+                    'points': [{'cluster_id': None, 
+                                'longitude': np.asscalar(xx), 
+                                'latitude': np.asscalar(yy), 
+                                'text': tt, 
+                                'date_time': dd} for xx, yy, tt, dd in zip(points_x, points_y, points_text, points_date_time)]
                 })
 
     # TODO: 9. Link clusters
@@ -224,7 +233,7 @@ def execute_event_detection_procedure(task_id: int, task_name: str, min_x, min_y
 
     # TODO: 10. Save clusters
     print("10. Save clusters")
-    postgres_tweets.insert_clusters(clusters)
+    postgres_events.insert_clusters(clusters)
 
 
 if __name__ == '__main__':
