@@ -2,13 +2,13 @@ import sys
 import os
 from time import sleep
 from gttm.ts.task_scheduler import TaskScheduler
-from gttm.db.postgres_event_detection_task import PostgresHandler_EventDetectionTask
+from gttm.db import PostgresHandler_EventDetection
 from dotenv import load_dotenv
 
 
 load_dotenv()
 
-postgres = PostgresHandler_EventDetectionTask(
+postgres = PostgresHandler_EventDetection(
     os.getenv('DB_HOSTNAME'), 
     os.getenv('DB_PORT'),
     os.getenv('DB_DATABASE'),
@@ -17,7 +17,7 @@ postgres = PostgresHandler_EventDetectionTask(
 
 delay = 10
 postgres.delete_event_detection_tasks()
-postgres.insert_event_detection_task('task 1 in sweden', 'desc ...', -180, -90, 180, 90, 120, 'sv', 5, False)
+postgres.insert_event_detection_task('task 1 NYC', 'desc ...', -76, 39, 71.5, 42, 36, 'en', 3, False)
 print('Inserted')
 # postgres.insert_event_detection_task('task 1 in sweden', 'desc ...', 1, 2, 3, 4, 'sv', 5, False)
 # print('Inserted')

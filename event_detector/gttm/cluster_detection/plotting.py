@@ -201,7 +201,6 @@ class Plotter:
         if save_plot and plot_folder_path != "":
             if not Path(file_path).parent.exists():
                 os.makedirs(Path(file_path).parent.absolute())
-            # TODO: It does not save the image with 300 dpi! It needs to be addressed.
             plt.savefig(file_path, dpi=300)
 
     @staticmethod
@@ -268,7 +267,6 @@ class Plotter:
         if save_plot and plot_file_path != "":
             if not Path(plot_file_path).parent.exists():
                 os.makedirs(Path(plot_file_path).parent.absolute())
-            # TODO: It does not save the image with 300 dpi! It needs to be addressed.
             plt.savefig(plot_file_path, dpi=300)
 
         if show_plot:

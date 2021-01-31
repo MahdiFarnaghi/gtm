@@ -8,7 +8,7 @@ import json
 import sys
 import traceback
 import logging
-from gttm.db.postgres_tweet import PostgresHandler_Tweets
+from gttm.db.postgres import PostgresHandler_Tweets
 
 # parse data
 

@@ -14,6 +14,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.engine.url import URL
 from sqlalchemy.engine.url import make_url
 from sqlalchemy.orm import Session
+from gttm.nlp import TextCleaner
 import pandas as pd
 
 class PostgresHandler:
@@ -208,10 +209,12 @@ class PostgresHandler:
                               Column('topic', String(2000), nullable=False),
                               Column('topic_words', String(
                                   500), nullable=False),
-                              Column('lat_min', Numeric),
-                              Column('lat_max', Numeric),
-                              Column('lon_min', Numeric),
-                              Column('lon_max', Numeric)
+                              Column('latitude_min', Numeric),
+                              Column('latitude_max', Numeric),
+                              Column('longitude_min', Numeric),
+                              Column('longitude_max', Numeric),
+                              Column('date_time_min', DateTime),
+                              Column('date_time_max', DateTime),
                               )
 
         cluster_point_id_seq = Sequence(

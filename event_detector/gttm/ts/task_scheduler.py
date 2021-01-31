@@ -10,7 +10,7 @@ class TaskScheduler:
     def __init__(self):
         jobs_database_name = 'jobs.sqlite'
         jobstores = {
-            'default': SQLAlchemyJobStore(url=F'sqlite:///{jobs_database_name}')
+           # 'default': SQLAlchemyJobStore(url=F'sqlite:///{jobs_database_name}')
         }
         executors = {
             'default': {'type': 'threadpool', 'max_workers': 20},
@@ -48,9 +48,9 @@ class TaskScheduler:
         print('\tAdding an interval task')
         self.scheduler.add_job(
             task_func,
-            IntervalTrigger(seconds=interval_minutes),
+            IntervalTrigger(minutes=interval_minutes),
             args=args,
-            id=task_id)
+            id=str(task_id))
         print('\tAdding the interval task finished')
 
     def remove_task(self, id):

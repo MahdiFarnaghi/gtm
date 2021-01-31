@@ -45,14 +45,14 @@ class EventDetector:
 
         db_tasks = self.postgres.get_tasks()
         for task in db_tasks:
-            sch_task = self.scheduler.get_task(task['task_name'])
+            sch_task = self.scheduler.get_task(str(task['task_id']))
             if sch_task is None:
                 self.scheduler.add_task(execute_event_detection_procedure, interval_minutes=task['interval_min'], args=(
-                    task['task_name'], task['min_x'], task['min_y'], task['max_x'], task['max_y'], task['look_back'], task['lang_code'],), task_id=task['task_name'])
+                    task['task_id'], task['task_name'], task['min_x'], task['min_y'], task['max_x'], task['max_y'], task['look_back'], task['lang_code'],), task_id=task['task_id'])
 
         running_tasks_ids = self.scheduler.get_tasks_ids()
         for task_id in running_tasks_ids:
-            if not any(task['task_name'] == task_id for task in db_tasks):
+            if not any(str(task['task_id']) == task_id for task in db_tasks):
                 self.scheduler.remove_task(task_id)
 
         pass
@@ -85,13 +85,15 @@ vectorizer = VectorizerUtil_FastText()
 def execute_event_detection_procedure(task_id: int, task_name: str, min_x, min_y, max_x, max_y, look_back_hours: int, lang_code,
                                       min_cluster_size=10, st_clustering_max_eps = 2, text_clustering_max_eps = 0.4, verbose=False):
 
-    print(F"Process: {task_name} ({task_id}), Language: {lang_code}")
 
     global postgres_tweets, postgres_events, vectorizer
 
     end_date = datetime.now()
     start_date = end_date - timedelta(hours=int(look_back_hours))
-
+    
+    print("*"*60)
+    print(F"Process: {task_name} ({task_id}), Language: {lang_code}, Interval: {start_date} to {end_date}")
+    
     # Read data from database
     print("1. Read data from database.")
     df, num = postgres_tweets.read_data_from_postgres(
@@ -112,19 +114,20 @@ def execute_event_detection_procedure(task_id: int, task_name: str, min_x, min_y
     # convert to geodataframe
     print("2. convert to GeoDataFrame")
     gdf = add_geometry(df, crs=get_wgs84_crs())
-
+    
     # get location vectors
-    print("3. Get location vectors")
+    print("3. Tweet info")
     x = np.asarray(gdf.geometry.x)[:, np.newaxis]
     y = np.asarray(gdf.geometry.y)[:, np.newaxis]
-
-    # get time vector
-    print("4. get time vector")
+    # get time vector    
     t = np.asarray(gdf.created_at.dt.year * 365.2425 + gdf.created_at.dt.day)
     date_time = gdf.created_at.dt.to_pydatetime()
+    # get tweet_id and user_id
+    tweet_id = gdf.id.values
+    user_id = gdf.user_id.values
     
     # Vectorzie text
-    print("5. Get text vector")
+    print("4. Get text vector")
     clean_text = df.c.values
     text = df.text.values       
     text_vect = None
@@ -133,7 +136,7 @@ def execute_event_detection_procedure(task_id: int, task_name: str, min_x, min_y
         text_vect_path = '~/temp/text.npy'        
         os.makedirs('~/temp', exist_ok=True)
         if os.path.exists(text_vect_path):
-            text_vect = np.load(text_vect_path)
+            text_vect = np.load(text_vect_path)            
         else:
             text_vect = vectorizer.vectorize(df.c.values, lang_code)
             np.save(text_vect_path, text_vect)
@@ -143,7 +146,7 @@ def execute_event_detection_procedure(task_id: int, task_name: str, min_x, min_y
     # print(F"Shape of the vectorized tweets: {text_vect.shape}")
 
     # Text-based clustering
-    print("6. Clustering - First-level: Text-based")
+    print("5. Clustering - First-level: Text-based")
     start_time = time()
     optics_ = OPTICS(
         min_cluster_size=min_cluster_size,
@@ -160,16 +163,16 @@ def execute_event_detection_procedure(task_id: int, task_name: str, min_x, min_y
         print(F"\tTime: {math.ceil(time_taken)} seconds")
 
     # topic identification
-    print("7. Identify topics")
+    print("6. Identify topics")
     # TODO: We need to specify the maximum number of tweets enter into the clustering procedures
     identTopic = HDPTopicIdentification()
-    identTopic.identify_topics(txt_clust_labels, df.c.values)
+    identTopic.identify_topics(txt_clust_labels, clean_text)
     if verbose:
         identTopic.print_cluster_topics('\t')
     topics = identTopic.get_cluster_topics()
 
     clusters = []
-    print("\n8. Clustering - Second-level: Spatiotemporal")
+    print("\n7. Clustering - Second-level: Spatiotemporal")
     for label in txt_clust_label_codes:
         if label >= 0:
             start_time = time()
@@ -179,6 +182,8 @@ def execute_event_detection_procedure(task_id: int, task_name: str, min_x, min_y
                 metric='precomputed')
             _x = x[txt_clust_labels == label]
             _y = y[txt_clust_labels == label]
+            _tweet_id = tweet_id[txt_clust_labels == label]
+            _user_id = user_id[txt_clust_labels == label]
             # _x = StandardScaler().fit_transform(x[txt_clust_labels == label])
             # _y = StandardScaler().fit_transform(y[txt_clust_labels == label])
             _text = text[txt_clust_labels == label]
@@ -186,7 +191,7 @@ def execute_event_detection_procedure(task_id: int, task_name: str, min_x, min_y
             #TODO: How to deal with tweets from a single user?
             st_vect = np.concatenate((_x,
                                       _y,
-                                      #   t[txt_clust_labels==label], #TODO: Should I include time?
+                                      #   t[txt_clust_labels==label], 
                                       ), axis=1)
             st_dist = euclidean_distances(st_vect)
             optics_.fit(st_dist)
@@ -206,36 +211,51 @@ def execute_event_detection_procedure(task_id: int, task_name: str, min_x, min_y
                 points_text = _text[st_clust_labels == l].tolist()
                 points_x = _x[st_clust_labels == l]
                 points_y = _y[st_clust_labels == l]
+                points_tweet_id = _tweet_id[st_clust_labels == l]
+                points_user_id = _user_id[st_clust_labels == l]
                 points_date_time = _date_time[st_clust_labels == l].tolist()
                 lat_min = np.min(points_y)
                 lat_max = np.max(points_y)
                 lon_min = np.min(points_x)
                 lon_max = np.max(points_x)
-                clusters.append({
-                    'id': None,
-                    'task_id': task_id,
-                    'task_name': task_name,
-                    'topic': topic,
-                    'topic_words': topic_words,
-                    'lat_min': lat_min,
-                    'lat_max': lat_max,
-                    'lon_min': lon_min,
-                    'lon_max': lon_max,
-                    'points': [{'cluster_id': None, 
-                                'longitude': np.asscalar(xx), 
-                                'latitude': np.asscalar(yy), 
-                                'text': tt, 
-                                'date_time': dd} for xx, yy, tt, dd in zip(points_x, points_y, points_text, points_date_time)]
-                })
+                dt_min = min(points_date_time)
+                dt_max = max(points_date_time)
+                if (len(np.unique(points_user_id)) > 1):
+                    clusters.append({
+                        'id': None,
+                        'task_id': task_id,
+                        'task_name': task_name,
+                        'topic': topic,
+                        'topic_words': topic_words,
+                        'latitude_min': lat_min,
+                        'latitude_max': lat_max,
+                        'longitude_min': lon_min,
+                        'longitude_max': lon_max,
+                        'date_time_min': dt_min,
+                        'date_time_max': dt_max,                    
+                        'points': [{'cluster_id': None, 
+                                    'longitude': np.asscalar(xx), 
+                                    'latitude': np.asscalar(yy), 
+                                    'text': tt,                                     
+                                    'date_time': dd,
+                                    'tweet_id': ti,
+                                    'user_id': ui} for xx, yy, tt, dd, ti, ui in zip(points_x, points_y, points_text, points_date_time, points_tweet_id, points_user_id)]
+                    })
+                    #TODO: The cluster_point table should be modified to receive the tweet_id and user_id
 
-    # TODO: 9. Link clusters
-    print("9. Link clusters")
-
-    # TODO: 10. Save clusters
-    print("10. Save clusters")
+    print("8. Link clusters")
+    #TODO: 8. Link clusters
+    #TODO: 8.1 Select cluster that coincide with the current time interval and extent     
+    #TODO: 8.2 Retrieve their points
+    #TODO: 8.3 Compare the point of the old clusters and the new clusters
+    #TODO: 8.4 Link the clusters with higher cluster relation strength    
+    print("9. Save clusters")
     postgres_events.insert_clusters(clusters)
+    
+    print(F"Process {task_name} ({task_id}) finished.")
+    print('*'*60)
 
-
+55
 if __name__ == '__main__':
     load_dotenv()
     # event_detector = EventDetector()
