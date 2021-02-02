@@ -20,6 +20,33 @@ from sklearn.preprocessing import StandardScaler
 import math
 
 
+load_dotenv()
+
+db_hostname = os.getenv('DB_HOSTNAME')
+db_port = os.getenv('DB_PORT')
+db_user = os.getenv('DB_USER')
+db_pass = os.getenv('DB_PASS')
+db_database = os.getenv('DB_DATABASE')
+
+postgres_tweets = PostgresHandler_Tweets(
+    db_hostname, db_port, db_database, db_user, db_pass)
+postgres_tweets.check_db()
+
+postgres_events = PostgresHandler_EventDetection(
+    db_hostname, db_port, db_database, db_user, db_pass)
+postgres_events.check_db()
+
+
+
+print('LOADING LANGUAGE MODELS')
+languages = os.getenv('LANGUAGES')
+if languages != '':
+    languages = str(languages).split(',')
+
+vectorizer = VectorizerUtil_FastText()
+[vectorizer.get_model(lang) for lang in languages]
+print('LOADING LANGUAGE MODELS was finished.')
+
 class EventDetector:
     def __init__(self, check_database_threshold=60):
         """
@@ -42,13 +69,16 @@ class EventDetector:
         self.scheduler.start_scheduler()
 
     def updates_event_detection_task(self):
-
         db_tasks = self.postgres.get_tasks()
         for task in db_tasks:
             sch_task = self.scheduler.get_task(str(task['task_id']))
             if sch_task is None:
-                self.scheduler.add_task(execute_event_detection_procedure, interval_minutes=task['interval_min'], args=(
-                    task['task_id'], task['task_name'], task['min_x'], task['min_y'], task['max_x'], task['max_y'], task['look_back'], task['lang_code'],), task_id=task['task_id'])
+                if task['lang_code'] in languages:
+                    self.scheduler.add_task(execute_event_detection_procedure, interval_minutes=task['interval_min'], args=(
+                        task['task_id'], task['task_name'], task['min_x'], task['min_y'], task['max_x'], task['max_y'], task['look_back_hrs'], task['lang_code'],), task_id=task['task_id'])
+                else:
+                    print(
+                        f"The selected language ({task['lang_code']}) is not supported.")
 
         running_tasks_ids = self.scheduler.get_tasks_ids()
         for task_id in running_tasks_ids:
@@ -64,36 +94,23 @@ class EventDetector:
             sleep(self.check_database_threshold)
 
 
-load_dotenv()
-db_hostname = os.getenv('DB_HOSTNAME')
-db_port = os.getenv('DB_PORT')
-db_user = os.getenv('DB_USER')
-db_pass = os.getenv('DB_PASS')
-db_database = os.getenv('DB_DATABASE')
-
-postgres_tweets = PostgresHandler_Tweets(
-    db_hostname, db_port, db_database, db_user, db_pass)
-postgres_tweets.check_db()
-
-postgres_events = PostgresHandler_EventDetection(
-    db_hostname, db_port, db_database, db_user, db_pass)
-postgres_events.check_db()
-
-vectorizer = VectorizerUtil_FastText()
-
-
 def execute_event_detection_procedure(task_id: int, task_name: str, min_x, min_y, max_x, max_y, look_back_hours: int, lang_code,
-                                      min_cluster_size=10, st_clustering_max_eps = 2, text_clustering_max_eps = 0.4, verbose=False):
+                                      min_cluster_size=10, st_clustering_max_eps=2, text_clustering_max_eps=0.4, verbose=False):
 
-
-    global postgres_tweets, postgres_events, vectorizer
+    global postgres_tweets, postgres_events, vectorizer, languages
 
     end_date = datetime.now()
     start_date = end_date - timedelta(hours=int(look_back_hours))
-    
+
     print("*"*60)
-    print(F"Process: {task_name} ({task_id}), Language: {lang_code}, Interval: {start_date} to {end_date}")
-    
+    print("*"*60)
+    print(
+        F"Process: {task_name} ({task_id}), Language: {lang_code}, Interval: {start_date} to {end_date}")
+
+    if not lang_code in languages:
+        print(f"The selected language ({lang_code}) is not supported.")
+        print('Processing was terminated.')
+
     # Read data from database
     print("1. Read data from database.")
     df, num = postgres_tweets.read_data_from_postgres(
@@ -107,6 +124,7 @@ def execute_event_detection_procedure(task_id: int, task_name: str, min_x, min_y
 
     if num <= 0:
         print('There was no record for processing.')
+        print('Processing was terminated.')
         return
     if verbose:
         print(F"Number of retrieved tweets: {num}")
@@ -114,35 +132,36 @@ def execute_event_detection_procedure(task_id: int, task_name: str, min_x, min_y
     # convert to geodataframe
     print("2. convert to GeoDataFrame")
     gdf = add_geometry(df, crs=get_wgs84_crs())
-    
+
     # get location vectors
     print("3. Tweet info")
     x = np.asarray(gdf.geometry.x)[:, np.newaxis]
     y = np.asarray(gdf.geometry.y)[:, np.newaxis]
-    # get time vector    
+    # get time vector
     t = np.asarray(gdf.created_at.dt.year * 365.2425 + gdf.created_at.dt.day)
     date_time = gdf.created_at.dt.to_pydatetime()
     # get tweet_id and user_id
     tweet_id = gdf.id.values
     user_id = gdf.user_id.values
-    
+
     # Vectorzie text
     print("4. Get text vector")
     clean_text = df.c.values
-    text = df.text.values       
+    text = df.text.values
     text_vect = None
-    #TODO: Remove - added to debugging
-    if __debug__: 
-        text_vect_path = '~/temp/text.npy'        
-        os.makedirs('~/temp', exist_ok=True)
-        if os.path.exists(text_vect_path):
-            text_vect = np.load(text_vect_path)            
-        else:
-            text_vect = vectorizer.vectorize(df.c.values, lang_code)
-            np.save(text_vect_path, text_vect)
-    else:
-        text_vect = vectorizer.vectorize(df.c.values, lang_code)
-    
+    text_vect = vectorizer.vectorize(df.c.values, lang_code)
+    # Added to debugging
+    # if __debug__:
+    #     text_vect_path = '~/temp/text.npy'
+    #     os.makedirs('~/temp', exist_ok=True)
+    #     if os.path.exists(text_vect_path):
+    #         text_vect = np.load(text_vect_path)
+    #     else:
+    #         text_vect = vectorizer.vectorize(df.c.values, lang_code)
+    #         np.save(text_vect_path, text_vect)
+    # else:
+    #     text_vect = vectorizer.vectorize(df.c.values, lang_code)
+
     # print(F"Shape of the vectorized tweets: {text_vect.shape}")
 
     # Text-based clustering
@@ -161,6 +180,10 @@ def execute_event_detection_procedure(task_id: int, task_name: str, min_x, min_y
     if verbose:
         print(F'\tNumber of clusters: {num_of_clusters - 1}')
         print(F"\tTime: {math.ceil(time_taken)} seconds")
+    if num_of_clusters <= 0:
+        print("No first level cluster was detected.")
+        print('Processing was terminated.')
+        return
 
     # topic identification
     print("6. Identify topics")
@@ -188,17 +211,18 @@ def execute_event_detection_procedure(task_id: int, task_name: str, min_x, min_y
             # _y = StandardScaler().fit_transform(y[txt_clust_labels == label])
             _text = text[txt_clust_labels == label]
             _date_time = date_time[txt_clust_labels == label]
-            #TODO: How to deal with tweets from a single user?
+            # TODO: How to deal with tweets from a single user?
             st_vect = np.concatenate((_x,
                                       _y,
-                                      #   t[txt_clust_labels==label], 
+                                      #   t[txt_clust_labels==label],
                                       ), axis=1)
             st_dist = euclidean_distances(st_vect)
             optics_.fit(st_dist)
             time_taken = time() - start_time
             st_clust_labels = optics_.labels_
-            st_clust_label_codes = np.unique(st_clust_labels)            
-            num_of_clusters = len( st_clust_label_codes[st_clust_label_codes >= 0])
+            st_clust_label_codes = np.unique(st_clust_labels)
+            num_of_clusters = len(
+                st_clust_label_codes[st_clust_label_codes >= 0])
             st_any_clust = num_of_clusters > 0
             if verbose:
                 print(f'\t{label}: {topics[label][4]}')
@@ -232,33 +256,32 @@ def execute_event_detection_procedure(task_id: int, task_name: str, min_x, min_y
                         'longitude_min': lon_min,
                         'longitude_max': lon_max,
                         'date_time_min': dt_min,
-                        'date_time_max': dt_max,                    
-                        'points': [{'cluster_id': None, 
-                                    'longitude': np.asscalar(xx), 
-                                    'latitude': np.asscalar(yy), 
-                                    'text': tt,                                     
+                        'date_time_max': dt_max,
+                        'points': [{'cluster_id': None,
+                                    'longitude': xx.item(),
+                                    'latitude': yy.item(),
+                                    'text': tt,
                                     'date_time': dd,
-                                    'tweet_id': ti,
-                                    'user_id': ui} for xx, yy, tt, dd, ti, ui in zip(points_x, points_y, points_text, points_date_time, points_tweet_id, points_user_id)]
+                                    'tweet_id': ti.item(),
+                                    'user_id': ui.item()} for xx, yy, tt, dd, ti, ui in zip(points_x, points_y, points_text, points_date_time, points_tweet_id, points_user_id)]
                     })
-                    #TODO: The cluster_point table should be modified to receive the tweet_id and user_id
 
     print("8. Link clusters")
-    #TODO: 8. Link clusters
-    #TODO: 8.1 Select cluster that coincide with the current time interval and extent     
-    #TODO: 8.2 Retrieve their points
-    #TODO: 8.3 Compare the point of the old clusters and the new clusters
-    #TODO: 8.4 Link the clusters with higher cluster relation strength    
+    # TODO: 8. Link clusters
+    # TODO: 8.1 Select cluster that coincide with the current time interval and extent
+    # TODO: 8.2 Retrieve their points
+    # TODO: 8.3 Compare the point of the old clusters and the new clusters
+    # TODO: 8.4 Link the clusters with higher cluster relation strength
     print("9. Save clusters")
     postgres_events.insert_clusters(clusters)
-    
+
     print(F"Process {task_name} ({task_id}) finished.")
     print('*'*60)
+    print("*"*60)
 
-55
+
 if __name__ == '__main__':
-    load_dotenv()
-    # event_detector = EventDetector()
-    # event_detector.run()
-    execute_event_detection_procedure(12,
-                                      'test', -180, -90, 180, 90, 2000, 'en', verbose=True)
+    event_detector = EventDetector()
+    event_detector.run()
+    # execute_event_detection_procedure(12,
+    #                                   'task 1 NYC', -76, 39, 71.5, 42, 36, 'en', verbose=True)

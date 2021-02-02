@@ -45,15 +45,15 @@ class TaskScheduler:
         self.scheduler.shutdown()
 
     def add_task(self, task_func, interval_minutes, args, task_id):
-        print('\tAdding an interval task')
+        print('Adding an interval task')
         self.scheduler.add_job(
             task_func,
             IntervalTrigger(minutes=interval_minutes),
             args=args,
             id=str(task_id))
-        print('\tAdding the interval task finished')
+        print('Adding the interval task finished')
 
     def remove_task(self, id):
-        print(F'\tRemoving task (Id: {id})')
+        print(F'Removing task (Id: {id})')
         self.scheduler.remove_job(id)
-        print('\tThe task removed.')
+        print('The task removed.')

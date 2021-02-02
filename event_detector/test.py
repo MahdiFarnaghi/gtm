@@ -15,6 +15,8 @@ postgres = PostgresHandler_EventDetection(
     os.getenv('DB_USER'),
     os.getenv('DB_PASS'))
 
+postgres.check_db()
+
 delay = 10
 postgres.delete_event_detection_tasks()
 postgres.insert_event_detection_task('task 1 NYC', 'desc ...', -76, 39, 71.5, 42, 36, 'en', 3, False)

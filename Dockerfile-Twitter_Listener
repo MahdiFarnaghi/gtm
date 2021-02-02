@@ -7,5 +7,5 @@ WORKDIR /code/twitter_listener
 # RUN echo $(ls) 
 # RUN if test -f "/code/twitter_listener/.env"; then echo ".env exists."; else echo ".env not found."; fi;
 RUN pip install -r requirements.txt
-RUN python download_wordnet.py
+RUN python download_prerequisites.py
 

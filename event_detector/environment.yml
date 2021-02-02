@@ -29,6 +29,7 @@ dependencies:
     - tqdm
     - apscheduler
     - fasttext==0.9.2
+    - tweepy
   - pytorch
   - geopandas=0.8.1
   - basemap

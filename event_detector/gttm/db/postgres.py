@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session
 from gttm.nlp import TextCleaner
 import pandas as pd
 
+
 class PostgresHandler:
     min_acceptable_num_words_in_tweet = 4
     expected_db_version = 4
@@ -86,7 +87,7 @@ class PostgresHandler:
                                                   nullable=False),
                                            Column('max_y', Numeric,
                                                   nullable=False),
-                                           Column('look_back', Numeric,
+                                           Column('look_back_hrs', Numeric,
                                                   nullable=False),
                                            Column('lang_code', String(
                                                2), nullable=False),
@@ -228,7 +229,10 @@ class PostgresHandler:
                               Column('longitude', Numeric, nullable=False),
                               Column('latitude', Numeric, nullable=False),
                               Column('text', String(500), nullable=False),
-                              Column('date_time', DateTime, nullable=False))
+                              Column('date_time', DateTime, nullable=False),
+                              Column('user_id', BigInteger, nullable=False),
+                              Column('tweet_id', BigInteger, nullable=False)
+                              )
 
         meta.create_all()
         property_table_sql_insert_version_2 = "UPDATE db_properties " \
@@ -745,7 +749,7 @@ class PostgresHandler_EventDetection(PostgresHandler):
                     'min_y': row['min_y'],
                     'max_x': row['max_x'],
                     'max_y': row['max_y'],
-                    'look_back': row['look_back'],
+                    'look_back_hrs': row['look_back_hrs'],
                     'lang_code': row['lang_code'],
                     'interval_min': row['interval_min']}
             )
@@ -760,7 +764,7 @@ class PostgresHandler_EventDetection(PostgresHandler):
         self.engine.execute(self.table_event_detection_task.delete().where(
             self.table_event_detection_task.c.task_name == task_name))
 
-    def insert_event_detection_task(self, task_name, desc: str, min_x, min_y, max_x, max_y, look_back, lang_code, interval_min, force_insert=False) -> int:
+    def insert_event_detection_task(self, task_name, desc: str, min_x, min_y, max_x, max_y, look_back_hrs, lang_code, interval_min, force_insert=False) -> int:
         self.check_db()
 
         ins = pg_insert(self.table_event_detection_task).values(
@@ -770,7 +774,7 @@ class PostgresHandler_EventDetection(PostgresHandler):
             min_y=min_y,
             max_x=max_x,
             max_y=max_y,
-            look_back=look_back,
+            look_back_hrs=look_back_hrs,
             lang_code=lang_code,
             interval_min=interval_min)
         if force_insert:
@@ -783,7 +787,7 @@ class PostgresHandler_EventDetection(PostgresHandler):
                     min_y=min_y,
                     max_x=max_x,
                     max_y=max_y,
-                    look_back=look_back,
+                    look_back_hrs=look_back_hrs,
                     lang_code=lang_code,
                     interval_min=interval_min)
             )
@@ -826,17 +830,17 @@ class PostgresHandler_EventDetection(PostgresHandler):
                 self.engine.execute(ins_points)
         pass
 
-    def insert_cluster(self, task_id, task_name, topic, topic_words, lat_min, lat_max, lon_min, lon_max) -> int:
-        ins_user = pg_insert(self.table_cluster).values(
-            task_id=task_id,
-            task_name=task_name,
-            topic=topic,
-            topic_words=topic_words,
-            lat_min=lat_min,
-            lat_max=lat_max,
-            lon_min=lon_min,
-            lon_max=lon_max
-        ).on_conflict_do_nothing(index_elements=['cluster_id'])
-        res_cluster = self.engine.execute(ins_user)
+    # def insert_cluster(self, task_id, task_name, topic, topic_words, lat_min, lat_max, lon_min, lon_max) -> int:
+    #     ins_user = pg_insert(self.table_cluster).values(
+    #         task_id=task_id,
+    #         task_name=task_name,
+    #         topic=topic,
+    #         topic_words=topic_words,
+    #         lat_min=lat_min,
+    #         lat_max=lat_max,
+    #         lon_min=lon_min,
+    #         lon_max=lon_max
+    #     ).on_conflict_do_nothing(index_elements=['cluster_id'])
+    #     res_cluster = self.engine.execute(ins_user)
 
-        return res_cluster.lastrowid
+    #     return res_cluster.lastrowid

@@ -21,6 +21,7 @@ consumer_secret = os.getenv('CONSUMER_SECRET')
 access_token = os.getenv('ACCESS_TOKEN')
 access_secret = os.getenv('ACCESS_SECRET')
 output_folder = os.getenv('TWEETS_OUPUT_FOLDER')
+#TODO: The boundary should be loaded from the tasks tables and it should be iteratively updated. 
 min_x = float(os.getenv('MIN_X')) if os.getenv('MIN_X') is not None else 0
 max_x = float(os.getenv('MAX_X')) if os.getenv('MAX_X') is not None else 0
 min_y = float(os.getenv('MIN_Y')) if os.getenv('MIN_Y') is not None else 0

@@ -12,6 +12,7 @@ from gttm.db.postgres import PostgresHandler_Tweets
 
 # parse data
 
+#TODO: There is an uncought exception in this process
 
 def parse_tweet(data):
 
