@@ -7,7 +7,6 @@ import requests
 import tempfile
 from pathlib import Path
 import traceback
-from tqdm import tqdm
 import fasttext
 import fasttext.util
 

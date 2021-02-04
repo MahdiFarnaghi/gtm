@@ -5,27 +5,16 @@ services:
     container_name: gtm_postgis
     restart: unless-stopped
     image: mdillon/postgis:11
+    # ports: 
+    #   - "0.0.0.0:5432:5432"
+    # expose:
+    #   - 5432
     volumes: 
-      - /data/gtm_postgis:/data/gtm_postgis
+      - /data/gtm_postgis:/var/lib/postgresql/data
     environment: 
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASS: ${POSTGRES_PASS}
       POSTGRES_PASSWORD: ${POSTGRES_PASS}
-  gtm_event_detector:
-    build:
-      context: .
-      dockerfile: Dockerfile-Event_Detector      
-    image: twitter_listener 
-    container_name: gtm_event_detector
-    volumes:
-      - /data/processing:/data/processing
-    environment: 
-      DB_HOSTNAME: gtm_postgis
-      DB_PORT: 5432  
-      DB_USER: ${POSTGRES_USER}
-      DB_PASS: ${POSTGRES_PASS}
-      DB_DATABASE: tweets_db    
-    command: conda run -n gtm python main.py
   gtm_twitter_listener:
     build:
       context: .
@@ -35,8 +24,12 @@ services:
     restart: unless-stopped    
     volumes:
       - /data/tweets:/data/tweets
+    links: 
+      - gtm_postgis
+    depends_on: 
+      - gtm_postgis
     environment:
-      SAVE_DATA_MODE: 'DB' # DB or FILE
+      SAVE_DATA_MODE: DB # DB or FILE
       TWEETS_OUPUT_FOLDER: '/data/tweets'
       CONSUMER_KEY: ${CONSUMER_KEY}
       CONSUMER_SECRET: ${CONSUMER_SECRET}
@@ -53,4 +46,26 @@ services:
       MIN_Y: -90.0
       MAX_Y: 90.0
       AREA_NAME: 'world'
-    command: python forever.py retrieve_data.py
+    # command: python forever.py retrieve_data.py
+  # gtm_event_detector:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile-Event_Detector      
+  #   image: event_detector 
+  #   container_name: gtm_event_detector
+  #   volumes:
+  #     - /data/processing:/data/processing
+  #   links: 
+  #     - gtm_postgis
+  #   depends_on: 
+  #     - gtm_postgis
+  #     - gtm_twitter_listener
+  #   environment: 
+  #     DB_HOSTNAME: gtm_postgis
+  #     DB_PORT: 5432  
+  #     DB_USER: ${POSTGRES_USER}
+  #     DB_PASS: ${POSTGRES_PASS}
+  #     DB_DATABASE: tweets_db
+  #     LANGUAGES: ${LANGUAGES} 
+  # #  command: conda run -n gtm python event_detector.py
+

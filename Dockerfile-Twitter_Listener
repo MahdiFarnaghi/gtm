@@ -9,3 +9,10 @@ WORKDIR /code/twitter_listener
 RUN pip install -r requirements.txt
 RUN python download_prerequisites.py
 
+#TODO: Test the following one with ./
+ENTRYPOINT python ./forever.py ./retrieve_data.py
+# ENTRYPOINT python code/twitter_listener/forever.py code/twitter_listener/retrieve_data.py
+# CMD ["forever.py", "retrieve_data.py"]
+# ENTRYPOINT ["python", "/code/twitter_listener/forever.py /code/twitter_listener/retrieve_data.py"]
+# ENTRYPOINT ["python", "test.py"]
+
