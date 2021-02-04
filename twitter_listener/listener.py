@@ -42,6 +42,7 @@ def parse_tweet(data):
 class TwitterStreamListener(StreamListener):
 
     def on_data(self, data):
+        print('New data')
         try:
             self.tweetnumber += 1
             tweet = parse_tweet(data)
@@ -89,12 +90,11 @@ class TwitterStreamListener(StreamListener):
         print("----------------------")
 
     def on_error(self, status):
-        # print(status)
+        print(status)
         return True
 
     def init(self,  area_name: str, output_folder: str, postgres: PostgresHandler_Tweets, save_data_mode='FILE', save_geotweets=True):
         print("Intializing Twitter's listener object.")
-
 
         #self.minx = minX
         #self.maxx = maxX

@@ -18,7 +18,7 @@ services:
   gtm_twitter_listener:
     build:
       context: .
-      dockerfile: Dockerfile-Twitter_Listener      
+      dockerfile: twitter_listener/Dockerfile  
     image: twitter_listener 
     container_name: gtm_twitter_listener
     restart: unless-stopped    
@@ -46,11 +46,12 @@ services:
       MIN_Y: -90.0
       MAX_Y: 90.0
       AREA_NAME: 'world'
+    command: python retrieve_data.py
     # command: python forever.py retrieve_data.py
   # gtm_event_detector:
   #   build:
   #     context: .
-  #     dockerfile: Dockerfile-Event_Detector      
+  #     dockerfile: event_detector/Dockerfile      
   #   image: event_detector 
   #   container_name: gtm_event_detector
   #   volumes:
@@ -67,5 +68,5 @@ services:
   #     DB_PASS: ${POSTGRES_PASS}
   #     DB_DATABASE: tweets_db
   #     LANGUAGES: ${LANGUAGES} 
-  # #  command: conda run -n gtm python event_detector.py
+  #   command: conda run -n gtm python event_detector.py
 
