@@ -41,8 +41,7 @@ def parse_tweet(data):
 
 class TwitterStreamListener(StreamListener):
 
-    def on_data(self, data):
-        print('New data')
+    def on_data(self, data):        
         try:
             self.tweetnumber += 1
             tweet = parse_tweet(data)
@@ -83,11 +82,11 @@ class TwitterStreamListener(StreamListener):
         return True
 
     def write_tweet_saved(self, geotweetnumber, tweetnumber, save_data_mode, dt):
-        print("----------------------")
+        # print("----------------------")
         print(F"{save_data_mode}: {str(geotweetnumber)} tweet saved out of {str(tweetnumber)}, at " +
                dt.strftime("%Y%m%d-%H:%M:%S"))
         # print(self.postgres.number_of_tweets())
-        print("----------------------")
+        # print("----------------------")
 
     def on_error(self, status):
         print(status)
@@ -121,7 +120,7 @@ class TwitterStreamListener(StreamListener):
                 F'The specified save_data_mode ({self.save_data_mode}) is not supported.')
         # self.logger = logging.getLogger(self.output_folder + os.sep + 'log')
         print('Initialization was successful.\n\n\n')
-        print('+++++++++++++++++++++++++++++++++++++++++++++++++++++++')
+        print('+'*60)
         print('Saving geotagged tweets in ' + area_name + ' started')
-        print('+++++++++++++++++++++++++++++++++++++++++++++++++++++++')
+        print('+'*60)
         print('\n')

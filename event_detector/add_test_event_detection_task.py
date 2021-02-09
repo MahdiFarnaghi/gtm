@@ -19,7 +19,7 @@ postgres.check_db()
 
 delay = 10
 postgres.delete_event_detection_tasks()
-postgres.insert_event_detection_task('task 1 NYC', 'desc ...', -76, 39, 71.5, 42, 36, 'en', 3, False)
+postgres.insert_event_detection_task('task 1 NYC', 'desc ...', -76, 39, 71.5, 42, 36, 'en', 5, False)
 print('Inserted')
 # postgres.insert_event_detection_task('task 1 in sweden', 'desc ...', 1, 2, 3, 4, 'sv', 5, False)
 # print('Inserted')

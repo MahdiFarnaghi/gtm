@@ -18,7 +18,7 @@ from sklearn.cluster import OPTICS
 from sklearn.metrics.pairwise import cosine_distances, euclidean_distances
 from sklearn.preprocessing import StandardScaler
 import math
-
+import traceback
 
 load_dotenv()
 
@@ -36,10 +36,10 @@ postgres_events = PostgresHandler_EventDetection(
     db_hostname, db_port, db_database, db_user, db_pass)
 postgres_events.check_db()
 
-#TODO: Added for test purposes. Remove these two lines.
+# TODO: Added for test purposes. Remove these two lines.
 postgres_events.delete_event_detection_tasks()
-postgres_events.insert_event_detection_task('task 1 NYC', 'desc ...', -76, 39, 71.5, 42, 36, 'en', 3, False)
-
+postgres_events.insert_event_detection_task(
+    'task 1 NYC', 'desc ...', -76, 39, 71.5, 42, 36, 'en', 3, False)
 
 
 print('LOADING LANGUAGE MODELS')
@@ -50,6 +50,7 @@ if languages != '':
 vectorizer = VectorizerUtil_FastText()
 [vectorizer.get_model(lang) for lang in languages]
 print('LOADING LANGUAGE MODELS was finished.')
+
 
 class EventDetector:
     def __init__(self, check_database_threshold=60):
@@ -284,8 +285,15 @@ def execute_event_detection_procedure(task_id: int, task_name: str, min_x, min_y
     print("*"*60)
 
 
-if __name__ == '__main__':
-    event_detector = EventDetector()
-    event_detector.run()
-    # execute_event_detection_procedure(12,
-    #                                   'task 1 NYC', -76, 39, 71.5, 42, 36, 'en', verbose=True)
+while True:
+    try:
+        event_detector = EventDetector()
+        event_detector.run()
+        # execute_event_detection_procedure(12, 'task 1 NYC', -76, 39, 71.5, 42, 36, 'en', verbose=True)
+    except:
+        print("&"*60)
+        print("&"*60)
+        print("Unhandled error caught")
+        traceback.print_exc()
+        print("&"*60)
+        print("&"*60)

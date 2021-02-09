@@ -18,6 +18,6 @@ SHELL ["conda", "run", "-n", "gtm", "/bin/bash", "-c"]
 
 RUN python download_prerequisites.py
 
-# ENTRYPOINT conda run -n gtm python event_detector.py
+ENTRYPOINT conda run -n gtm python -u event_detector.py
 
 # ENTRYPOINT ["conda", "run", "--no-capture-output", "-n", "gtm", "python", "event_detector.py"]
