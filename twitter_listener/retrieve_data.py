@@ -46,6 +46,7 @@ def retrieve_data():
     languages = os.getenv('LANGUAGES')
     if languages != '':
         languages = str(languages).split(',')
+        languages = [str.strip(lang) for lang in languages]
         print(f"Languages: {languages}")
     else:
         print(f"Languages: {languages}")

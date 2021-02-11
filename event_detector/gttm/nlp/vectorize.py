@@ -36,7 +36,11 @@ class VectorizerUtil_FastText:
 
     def get_model(self, lang):
         if not lang in self.models.keys():
-            fasttext.util.download_model(lang, if_exists='ignore')
+            self.download_model(lang)
             self.models[lang] = fasttext.load_model(
                 self.get_model_file_name(lang))
         return self.models[lang]
+    
+
+    def download_model(self, lang):
+        fasttext.util.download_model(lang, if_exists='ignore')

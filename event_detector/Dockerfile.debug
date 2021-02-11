@@ -1,0 +1,12 @@
+FROM gtm_miniconda:latest
+
+RUN mkdir -p /code
+RUN mkdir -p /data/processing
+COPY event_detector /code/event_detector
+WORKDIR /code/event_detector
+
+ENV PATH /opt/conda/envs/gtm/bin:$PATH
+RUN /bin/bash -c "source activate gtm"
+
+ENTRYPOINT ["python"]
+CMD ["-u", "event_detector.py"]

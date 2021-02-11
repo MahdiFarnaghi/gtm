@@ -19,6 +19,7 @@ from sklearn.metrics.pairwise import cosine_distances, euclidean_distances
 from sklearn.preprocessing import StandardScaler
 import math
 import traceback
+import nltk
 
 load_dotenv()
 
@@ -46,10 +47,15 @@ print('LOADING LANGUAGE MODELS')
 languages = os.getenv('LANGUAGES')
 if languages != '':
     languages = str(languages).split(',')
+    languages = [str.strip(lang) for lang in languages]
 
 vectorizer = VectorizerUtil_FastText()
 [vectorizer.get_model(lang) for lang in languages]
 print('LOADING LANGUAGE MODELS was finished.')
+
+print('LOADING NLTK')
+nltk.download('wordnet')
+print('LOADING NLTK was finished!')
 
 
 class EventDetector:
@@ -98,11 +104,12 @@ class EventDetector:
             # Check for new instruction in the database
             sleep(self.check_database_threshold)
 
-
+exec_number = 0
 def execute_event_detection_procedure(task_id: int, task_name: str, min_x, min_y, max_x, max_y, look_back_hours: int, lang_code,
-                                      min_cluster_size=10, st_clustering_max_eps=2, text_clustering_max_eps=0.4, verbose=False):
+                                      min_cluster_size=10, st_clustering_max_eps=2, text_clustering_max_eps=0.4, verbose=True):
 
-    global postgres_tweets, postgres_events, vectorizer, languages
+    global postgres_tweets, postgres_events, vectorizer, languages, exec_number
+    exec_number = exec_number + 1
 
     end_date = datetime.now()
     start_date = end_date - timedelta(hours=int(look_back_hours))
@@ -111,6 +118,7 @@ def execute_event_detection_procedure(task_id: int, task_name: str, min_x, min_y
     print("*"*60)
     print(
         F"Process: {task_name} ({task_id}), Language: {lang_code}, Interval: {start_date} to {end_date}")
+    print(F"Execution number: {exec_number}")
 
     if not lang_code in languages:
         print(f"The selected language ({lang_code}) is not supported.")

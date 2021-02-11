@@ -7,16 +7,14 @@ RUN apt-get update \
         cmake
 
 RUN mkdir -p /code
-RUN mkdir -p /data/processing
-COPY event_detector /code/event_detector
-WORKDIR /code/event_detector
+
+COPY environment.yml /code
+COPY download_prerequisites.py /code
+WORKDIR /code
 RUN conda update -n base -c defaults conda
 RUN conda env create --file environment.yml
 
 ENV PATH /opt/conda/envs/gtm/bin:$PATH
 RUN /bin/bash -c "source activate gtm"
 
-RUN python download_prerequisites.py
-
-ENTRYPOINT ["python"]
-CMD ["-u", "event_detector.py"]
+RUN python -u download_prerequisites.py
