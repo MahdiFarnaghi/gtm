@@ -37,12 +37,6 @@ postgres_events = PostgresHandler_EventDetection(
     db_hostname, db_port, db_database, db_user, db_pass)
 postgres_events.check_db()
 
-# TODO: Added for test purposes. Remove these two lines.
-postgres_events.delete_event_detection_tasks()
-postgres_events.insert_event_detection_task(
-    'task 1 NYC', 'desc ...', -76, 39, 71.5, 42, 36, 'en', 3, False)
-
-
 print('LOADING LANGUAGE MODELS')
 languages = os.getenv('LANGUAGES')
 if languages != '':

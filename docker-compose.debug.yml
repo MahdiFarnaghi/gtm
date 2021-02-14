@@ -28,6 +28,8 @@ services:
       - gtm_postgis
     environment:
       SAVE_DATA_MODE: DB # DB or FILE
+      TWEETS_FOR_TASKS: True
+      CHECK_DB_INTERVAL: 60
       TWEETS_OUPUT_FOLDER: '/data/tweets'
       CONSUMER_KEY: ${CONSUMER_KEY}
       CONSUMER_SECRET: ${CONSUMER_SECRET}
@@ -65,5 +67,3 @@ services:
       DB_PASS: ${POSTGRES_PASS}
       DB_DATABASE: tweets_db
       LANGUAGES: ${LANGUAGES} 
-  # #   command: conda run -n gtm python event_detector.py
-

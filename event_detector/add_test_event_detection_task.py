@@ -18,9 +18,22 @@ postgres = PostgresHandler_EventDetection(
 postgres.check_db()
 
 delay = 10
-postgres.delete_event_detection_tasks()
-postgres.insert_event_detection_task('task 1 NYC', 'desc ...', -76, 39, 71.5, 42, 36, 'en', 5, False)
+# postgres.delete_event_detection_tasks()
+# postgres.insert_event_detection_task('task 1 NYC', 'desc ...', -76, 39, 71.5, 42, 36, 'en', 5, False)
+
 print('Inserted')
+
+# postgres.delete_event_detection_tasks()
+postgres.insert_event_detection_task('task 2 London', 'desc ...', -1, 51, 1, 52, 36, 'en', 5, False)
+
+# postgres.insert_event_detection_task('task 2 Lisbon', 'desc ...', -9.5, 38.5, -9, 39, 36, 'pt', 5, False)
+
+#AREA_NAME=london
+#MIN_X=-1
+#MAX_X=1
+#MIN_Y=51
+#MAX_Y=52
+
 # postgres.insert_event_detection_task('task 1 in sweden', 'desc ...', 1, 2, 3, 4, 'sv', 5, False)
 # print('Inserted')
 # sleep(delay)

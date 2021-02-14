@@ -755,6 +755,21 @@ class PostgresHandler_EventDetection(PostgresHandler):
             )
         return tasks
 
+    def get_tasks_bbox(self):
+        get_task_cql = "SELECT min(min_x) as min_x, min(min_y) as min_y, max(max_x) as max_x, max(max_y) as max_y from event_detection_task;"
+        res = self.engine.execute(get_task_cql)
+        for row in res:
+            return row['min_x'], row['min_y'], row['max_x'], row['max_y']
+        return None, None, None, None, None
+    
+    def get_tasks_languages(self):
+        get_task_cql = "SELECT distinct(lang_code) from event_detection_task;"
+        res = self.engine.execute(get_task_cql)
+        languages = []
+        for row in res:
+            languages.append(str(row['lang_code']))
+        return languages
+
     def delete_event_detection_tasks(self):
         self.check_db()
         self.engine.execute(self.table_event_detection_task.delete())
