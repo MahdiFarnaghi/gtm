@@ -14,6 +14,11 @@ import traceback
 import multiprocessing
 import time
 
+import nltk
+
+print('LOADING NLTK')
+nltk.download('wordnet', '/data/nltk')
+print('LOADING NLTK was finished!')
 
 def retrieve_data():
     load_dotenv()

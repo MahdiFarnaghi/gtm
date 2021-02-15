@@ -12,5 +12,5 @@ for lang in languages:
 print('LOADING FASTTEXT LANGUAGE MODELS was finished.')
 
 print('LOADING NLTK')
-nltk.download('wordnet')
+nltk.download('wordnet', '/data/nltk')
 print('LOADING NLTK was finished!')

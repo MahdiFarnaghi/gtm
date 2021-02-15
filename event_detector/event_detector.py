@@ -48,7 +48,7 @@ vectorizer = VectorizerUtil_FastText()
 print('LOADING LANGUAGE MODELS was finished.')
 
 print('LOADING NLTK')
-nltk.download('wordnet')
+nltk.download('wordnet', '/data/nltk')
 print('LOADING NLTK was finished!')
 
 
@@ -290,8 +290,7 @@ def execute_event_detection_procedure(task_id: int, task_name: str, min_x, min_y
 while True:
     try:
         event_detector = EventDetector()
-        event_detector.run()
-        # execute_event_detection_procedure(12, 'task 1 NYC', -76, 39, 71.5, 42, 36, 'en', verbose=True)
+        event_detector.run()        
     except:
         print("&"*60)
         print("&"*60)

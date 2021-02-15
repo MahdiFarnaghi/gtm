@@ -1,4 +1,5 @@
 FROM python:3.7
+RUN mkdir -p /data/nltk
 RUN mkdir -p /code
 RUN mkdir -p /data/tweets
 COPY twitter_listener /code/twitter_listener

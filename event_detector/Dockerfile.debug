@@ -1,5 +1,6 @@
 FROM gtm_miniconda:latest
 
+RUN mkdir -p /data/nltk
 RUN mkdir -p /code
 RUN mkdir -p /data/processing
 COPY event_detector /code/event_detector

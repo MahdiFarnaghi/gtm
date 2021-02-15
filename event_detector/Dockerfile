@@ -6,6 +6,7 @@ RUN apt-get update \
         build-essential \
         cmake
 
+RUN mkdir -p /data/nltk
 RUN mkdir -p /code
 RUN mkdir -p /data/processing
 COPY event_detector /code/event_detector

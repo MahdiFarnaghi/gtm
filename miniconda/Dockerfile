@@ -6,11 +6,12 @@ RUN apt-get update \
         build-essential \
         cmake
 
-RUN mkdir -p /code
+RUN mkdir -p /code/event_detector
+RUN mkdir -p /data/nltk
 
-COPY environment.yml /code
-COPY download_prerequisites.py /code
-WORKDIR /code
+COPY environment.yml /code/event_detector
+COPY download_prerequisites.py /code/event_detector
+WORKDIR /code/event_detector
 RUN conda update -n base -c defaults conda
 RUN conda env create --file environment.yml
 

@@ -502,4 +502,4 @@ def extract_clusters():
 
 def initialization():
     import nltk
-    nltk.download()
+    nltk.download('wordnet', '/data/nltk')

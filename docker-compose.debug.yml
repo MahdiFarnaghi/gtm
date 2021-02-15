@@ -5,8 +5,8 @@ services:
     container_name: gtm_postgis
     restart: unless-stopped
     image: mdillon/postgis:11
-    # ports: 
-    #   - "127.0.0.1:5432:5432"    
+    ports: 
+      - "127.0.0.1:25432:5432"    
     volumes: 
       - /data/gtm_postgis:/var/lib/postgresql/data
     environment: 
@@ -22,13 +22,14 @@ services:
     restart: unless-stopped    
     volumes:
       - /data/tweets:/data/tweets
+      - /data/nltk:/data/nltk
     links: 
       - gtm_postgis
     depends_on: 
       - gtm_postgis
     environment:
       SAVE_DATA_MODE: DB # DB or FILE
-      TWEETS_FOR_TASKS: True
+      TWEETS_FOR_TASKS: 'True'
       CHECK_DB_INTERVAL: 60
       TWEETS_OUPUT_FOLDER: '/data/tweets'
       CONSUMER_KEY: ${CONSUMER_KEY}
@@ -40,13 +41,8 @@ services:
       DB_USER: ${POSTGRES_USER}
       DB_PASS: ${POSTGRES_PASS}
       DB_DATABASE: tweets_db
-      # DB_REBUILD: 'False'
-      MIN_X: ${MIN_X}
-      MAX_X: ${MAX_X}
-      MIN_Y: ${MIN_Y}
-      MAX_Y: ${MAX_Y}
-      AREA_NAME: ${AREA_NAME}
-      LANGUAGES:  ${LANGUAGES}  
+      # DB_REBUILD: 'False'      
+      LANGUAGES: en,pt  
   gtm_event_detector:
     build:
       context: .
@@ -55,6 +51,7 @@ services:
     container_name: gtm_event_detector
     volumes:
       - /data/processing:/data/processing
+      - /data/nltk:/data/nltk
     links: 
       - gtm_postgis
     depends_on: 
@@ -66,4 +63,4 @@ services:
       DB_USER: ${POSTGRES_USER}
       DB_PASS: ${POSTGRES_PASS}
       DB_DATABASE: tweets_db
-      LANGUAGES: ${LANGUAGES} 
+      LANGUAGES: en,pt

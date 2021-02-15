@@ -734,25 +734,25 @@ class PostgresHandler_EventDetection(PostgresHandler):
         super().__init__(DB_HOSTNAME, DB_PORT, DB_DATABASE,
                          DB_USERNAME, DB_PASSWORD)
 
-    def get_tasks(self) -> dict:
+    def get_tasks(self, active=True) -> dict:
         tasks = []
         self.check_db()
-
         result = self.engine.execute(self.table_event_detection_task.select())
         for row in result:
-            tasks.append(
-                {
-                    'task_id': row['task_id'],
-                    'task_name': row['task_name'],
-                    'desc': row['desc'],
-                    'min_x': row['min_x'],
-                    'min_y': row['min_y'],
-                    'max_x': row['max_x'],
-                    'max_y': row['max_y'],
-                    'look_back_hrs': row['look_back_hrs'],
-                    'lang_code': row['lang_code'],
-                    'interval_min': row['interval_min']}
-            )
+            if row['active'] == active:
+                tasks.append(
+                    {
+                        'task_id': row['task_id'],
+                        'task_name': row['task_name'],
+                        'desc': row['desc'],
+                        'min_x': row['min_x'],
+                        'min_y': row['min_y'],
+                        'max_x': row['max_x'],
+                        'max_y': row['max_y'],
+                        'look_back_hrs': row['look_back_hrs'],
+                        'lang_code': row['lang_code'],
+                        'interval_min': row['interval_min']}
+                )
         return tasks
 
     def get_tasks_bbox(self):
@@ -771,7 +771,7 @@ class PostgresHandler_EventDetection(PostgresHandler):
         self.engine.execute(self.table_event_detection_task.delete().where(
             self.table_event_detection_task.c.task_name == task_name))
 
-    def insert_event_detection_task(self, task_name, desc: str, min_x, min_y, max_x, max_y, look_back_hrs, lang_code, interval_min, force_insert=False) -> int:
+    def insert_event_detection_task(self, task_name, desc: str, min_x, min_y, max_x, max_y, look_back_hrs, lang_code, interval_min, active=True, force_insert=False) -> int:
         self.check_db()
 
         ins = pg_insert(self.table_event_detection_task).values(
@@ -783,7 +783,8 @@ class PostgresHandler_EventDetection(PostgresHandler):
             max_y=max_y,
             look_back_hrs=look_back_hrs,
             lang_code=lang_code,
-            interval_min=interval_min)
+            interval_min=interval_min,
+            active=active)
         if force_insert:
             ins = ins.on_conflict_do_update(
                 index_elements=['task_name'],
@@ -796,7 +797,8 @@ class PostgresHandler_EventDetection(PostgresHandler):
                     max_y=max_y,
                     look_back_hrs=look_back_hrs,
                     lang_code=lang_code,
-                    interval_min=interval_min)
+                    interval_min=interval_min,
+                    active=active)
             )
         else:
             ins = ins.on_conflict_do_nothing(
@@ -805,7 +807,6 @@ class PostgresHandler_EventDetection(PostgresHandler):
                 index_elements=['task_name'])
         res = self.engine.execute(ins)
         return res.lastrowid
-        # return res.rowcount > 0
 
     def insert_clusters(self, clusters: list):
         for cluster in clusters:
