@@ -21,6 +21,9 @@ import math
 import traceback
 import nltk
 
+# TODO: fix the version of packages
+# TODO: timezone
+
 load_dotenv()
 
 db_hostname = os.getenv('DB_HOSTNAME')
@@ -50,6 +53,8 @@ print('LOADING LANGUAGE MODELS was finished.')
 print('LOADING NLTK')
 nltk.download('wordnet', '/data/nltk')
 print('LOADING NLTK was finished!')
+
+min_linking_ratio = .6
 
 
 class EventDetector:
@@ -98,7 +103,10 @@ class EventDetector:
             # Check for new instruction in the database
             sleep(self.check_database_threshold)
 
+
 exec_number = 0
+
+
 def execute_event_detection_procedure(task_id: int, task_name: str, min_x, min_y, max_x, max_y, look_back_hours: int, lang_code,
                                       min_cluster_size=10, st_clustering_max_eps=2, text_clustering_max_eps=0.4, verbose=True):
 
@@ -274,11 +282,69 @@ def execute_event_detection_procedure(task_id: int, task_name: str, min_x, min_y
                     })
 
     print("8. Link clusters")
-    # TODO: 8. Link clusters
-    # TODO: 8.1 Select cluster that coincide with the current time interval and extent
-    # TODO: 8.2 Retrieve their points
-    # TODO: 8.3 Compare the point of the old clusters and the new clusters
-    # TODO: 8.4 Link the clusters with higher cluster relation strength
+    num_new_cluster = 0
+    num_updated_cluster = 0
+    for cluster in clusters:
+        # 8.1 Select cluster that coincide with the current time interval and extent
+        db_clusters = postgres_events.get_clusters(
+            cluster['latitude_min'],
+            cluster['latitude_max'],
+            cluster['longitude_min'],
+            cluster['longitude_max'],
+            cluster['date_time_min'],
+            cluster['date_time_max']
+        )
+        # 8.2 Retrieve their points
+        coverage_id = []
+        coverage_ratio = []
+        # 8.3 Compare the point of the old clusters and the new clusters
+        for db_cluster in db_clusters:
+            db_cluster_point_tweet_ids = np.array(
+                postgres_events.get_cluster_point_tweet_ids(db_cluster['id']))
+            cluster_point_tweet_ids = np.array(
+                [point['tweet_id'] for point in cluster['points']])
+            numerator = len(np.intersect1d(
+                db_cluster_point_tweet_ids, cluster_point_tweet_ids))
+            denominator = len(np.union1d(
+                db_cluster_point_tweet_ids, cluster_point_tweet_ids))
+            if denominator > 0:
+                coverage_id.append(db_cluster['id'])
+                coverage_ratio.append(numerator / denominator)
+
+        # 8.4 Link the clusters with higher cluster relation strength
+        if len(coverage_id) > 0 and max(coverage_ratio) >= min_linking_ratio:
+            coverage_ratio = np.array(coverage_ratio)
+            coverage_id = np.array(coverage_id)
+            cluster['id'] = np.max(
+                coverage_id[coverage_ratio == max(coverage_ratio)]).item()
+            db_cluster = None
+            for db_clust in db_clusters:
+                if db_clust['id'] == cluster['id']:
+                    db_cluster = db_clust
+            if not db_cluster is None:
+                cluster['latitude_min'] = min(
+                    cluster['latitude_min'], db_cluster['latitude_min'])
+                cluster['latitude_max'] = max(
+                    cluster['latitude_max'], db_cluster['latitude_max'])
+                cluster['longitude_min'] = min(
+                    cluster['longitude_min'], db_cluster['longitude_min'])
+                cluster['longitude_max'] = max(
+                    cluster['longitude_max'], db_cluster['longitude_max'])
+                cluster['date_time_min'] = min(
+                    cluster['date_time_min'], db_cluster['date_time_min'])
+                cluster['date_time_max'] = max(
+                    cluster['date_time_max'], db_cluster['date_time_max'])
+
+            for i in range(0, len(cluster['points'])):
+                cluster['points'][i]['cluster_id'] = cluster['id']
+
+            num_updated_cluster += 1
+        else:
+            num_new_cluster += 1
+        pass
+    print(
+        f'\t # updated clusters: {num_updated_cluster}, # new clusters: {num_new_cluster}')
+
     print("9. Save clusters")
     postgres_events.insert_clusters(clusters)
 
@@ -290,7 +356,7 @@ def execute_event_detection_procedure(task_id: int, task_name: str, min_x, min_y
 while True:
     try:
         event_detector = EventDetector()
-        event_detector.run()        
+        event_detector.run()
     except:
         print("&"*60)
         print("&"*60)

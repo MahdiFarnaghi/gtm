@@ -771,6 +771,74 @@ class PostgresHandler_EventDetection(PostgresHandler):
         self.engine.execute(self.table_event_detection_task.delete().where(
             self.table_event_detection_task.c.task_name == task_name))
 
+    def get_clusters(self, latitude_min, latitude_max, longitude_min, longitude_max, date_time_min, date_time_max):
+        get_clusters_sql = f"""SELECT * FROM cluster WHERE 
+            ST_Intersects(
+            ST_MakeEnvelope({longitude_min}, {longitude_max}, {latitude_min}, {latitude_max})
+            ,
+            ST_MakeEnvelope(longitude_min, longitude_max, latitude_min, latitude_max)
+            )
+            AND 
+            ('{date_time_min}' BETWEEN date_time_min AND date_time_max);"""
+
+        get_clusters_sql = get_clusters_sql.replace('\n', ' ')
+
+        res = self.engine.execute(get_clusters_sql)
+
+        clusters = []
+        for row in res:
+            clusters.append(
+                {
+                    'id': row['id'],
+                    'task_id': row['task_id'],
+                    'task_name': row['task_name'],
+                    'topic': row['topic'],
+                    'topic_words': row['topic_words'],
+                    'latitude_min': row['latitude_min'],
+                    'latitude_max': row['latitude_max'],
+                    'longitude_min': row['longitude_min'],
+                    'longitude_max': row['longitude_max'],
+                    'date_time_min': row['date_time_min'],
+                    'date_time_max': row['date_time_max'],
+                }
+            )
+        return clusters
+
+    def get_cluster_points(self, cluster_id):
+
+        get_point_sql = f"""SELECT * FROM cluster_point WHERE 
+            cluster_id = {cluster_id};"""
+        res = self.engine.execute(get_point_sql)
+
+        cluster_points = []
+        for row in res:
+            cluster_points.append(
+                {
+                    'id': row['id'],
+                    'cluster_id': row['cluster_id'],
+                    'longitude': row['longitude'],
+                    'latitude': row['latitude'],
+                    'text': row['text'],
+                    'date_time': row['date_time'],
+                    'user_id': row['user_id'],
+                    'tweet_id': row['tweet_id'],
+                }
+            )
+        return cluster_points
+
+    def get_cluster_point_tweet_ids(self, cluster_id):
+        get_point_sql = f"""SELECT tweet_id FROM cluster_point WHERE 
+            cluster_id = {cluster_id};"""
+
+        res = self.engine.execute(get_point_sql)
+
+        cluster_point_ids = []
+
+        for row in res:
+            cluster_point_ids.append(row['tweet_id'])
+
+        return cluster_point_ids
+
     def insert_event_detection_task(self, task_name, desc: str, min_x, min_y, max_x, max_y, look_back_hrs, lang_code, interval_min, active=True, force_insert=False) -> int:
         self.check_db()
 
