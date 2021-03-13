@@ -193,7 +193,7 @@ def execute_event_detection_procedure(task_id: int, task_name: str, min_x, min_y
     txt_clust_label_codes = np.unique(txt_clust_labels)
     num_of_clusters = len(txt_clust_label_codes[txt_clust_label_codes >= 0])
     if verbose:
-        print(F'\tNumber of clusters: {num_of_clusters - 1}')
+        print(F'\tNumber of text based clusters: {num_of_clusters - 1}')
         print(F"\tTime: {math.ceil(time_taken)} seconds")
     if num_of_clusters <= 0:
         print("No first level cluster was detected.")
@@ -226,7 +226,6 @@ def execute_event_detection_procedure(task_id: int, task_name: str, min_x, min_y
             # _y = StandardScaler().fit_transform(y[txt_clust_labels == label])
             _text = text[txt_clust_labels == label]
             _date_time = date_time[txt_clust_labels == label]
-            # TODO: How to deal with tweets from a single user?
             st_vect = np.concatenate((_x,
                                       _y,
                                       #   t[txt_clust_labels==label],
@@ -239,10 +238,6 @@ def execute_event_detection_procedure(task_id: int, task_name: str, min_x, min_y
             num_of_clusters = len(
                 st_clust_label_codes[st_clust_label_codes >= 0])
             st_any_clust = num_of_clusters > 0
-            if verbose:
-                print(f'\t{label}: {topics[label][4]}')
-                print(
-                    F"\t#tweets: {len(st_clust_labels)}, #clusters {num_of_clusters}, time: {math.ceil(time_taken)} seconds")
 
             for l in st_clust_label_codes[st_clust_label_codes >= 0]:
                 topic = topics[label][3]
@@ -280,6 +275,9 @@ def execute_event_detection_procedure(task_id: int, task_name: str, min_x, min_y
                                     'tweet_id': ti.item(),
                                     'user_id': ui.item()} for xx, yy, tt, dd, ti, ui in zip(points_x, points_y, points_text, points_date_time, points_tweet_id, points_user_id)]
                     })
+    if verbose:
+        print(F'\tNumber of spatial clusters: {len(clusters)}')
+        print(F"\tTime: {math.ceil(time_taken)} seconds")
 
     print("8. Link clusters")
     num_new_cluster = 0
