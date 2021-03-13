@@ -1,7 +1,8 @@
 import json
 from copy import copy
 from datetime import datetime
-
+from sqlalchemy.sql.elements import collate
+from sqlalchemy.sql.expression import null
 import sqlalchemy_utils
 from geoalchemy2 import Geometry
 from sqlalchemy import Column
@@ -13,13 +14,13 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.engine.url import URL
 from sqlalchemy.engine.url import make_url
 from sqlalchemy.orm import Session
-
-from nlp import TextCleaner
+from gttm.nlp import TextCleaner
+import pandas as pd
 
 
 class PostgresHandler:
     min_acceptable_num_words_in_tweet = 4
-    expected_db_version = 3
+    expected_db_version = 4
 
     def __init__(self, DB_HOSTNAME, DB_PORT, DB_DATABASE, DB_USERNAME, DB_PASSWORD):
 
@@ -37,6 +38,9 @@ class PostgresHandler:
         self.table_twitter_user = None
         self.table_hashtag = None
         self.table_tweet_hashtag = None
+        self.table_event_detection_task = None
+        self.table_cluster = None
+        self.table_cluster_points = None
 
     def __del__(self):
         # if self.engine is not None:
@@ -65,28 +69,39 @@ class PostgresHandler:
         property_table = Table('db_properties', meta,
                                Column('key', String, primary_key=True),
                                Column('value', String))
-
-        event_detection_task_table = Table('event_detection_task', meta, 
-                                Column('id', BigInteger, Sequence('seq_event_detection_task_id')),
-                                Column('task_name', String(100)),
-                                Column('desc', String(500), nullable=True),
-                                Column('min_x', Numeric),
-                                Column('min_y', Numeric),
-                                Column('max_x', Numeric),
-                                Column('max_y', Numeric),
-                                Column('lang_code', String(2)),
-                                Column('interval_min', Integer)
-                                )
+        task_id_seq = Sequence(
+            'event_detection_task_id_seq', metadata=meta)
+        event_detection_task_table = Table('event_detection_task', meta,
+                                           Column('task_id', BigInteger, task_id_seq,
+                                                  server_default=task_id_seq.next_value(),
+                                                  primary_key=True),
+                                           Column('task_name', String(
+                                               100), nullable=False, unique=True),
+                                           Column('desc', String(
+                                               500), nullable=True),
+                                           Column('min_x', Numeric,
+                                                  nullable=False),
+                                           Column('min_y', Numeric,
+                                                  nullable=False),
+                                           Column('max_x', Numeric,
+                                                  nullable=False),
+                                           Column('max_y', Numeric,
+                                                  nullable=False),
+                                           Column('look_back_hrs', Numeric,
+                                                  nullable=False),
+                                           Column('lang_code', String(
+                                               2), nullable=False),
+                                           Column('interval_min',
+                                                  Integer, nullable=False),
+                                           Column('active', Boolean,
+                                                  default=False),
+                                           )
 
         meta.create_all()
         property_table_sql_insert_version_1 = "INSERT INTO db_properties (key, value) " \
                                               "VALUES ('version', '{}');".format(
                                                   "1")
         self.engine.execute(property_table_sql_insert_version_1)
-        # postgis_sql = 'CREATE EXTENSION postgis;'
-        # self.engine.execute(postgis_sql)
-        # postgis_topology_sql = 'CREATE EXTENSION postgis_topology;'
-        # self.engine.execute(postgis_topology_sql)
         pass
 
     def create_database_schema_version02(self):
@@ -149,18 +164,11 @@ class PostgresHandler:
                                         'tweet.id'), primary_key=True),
                                     Column('hashtag_id', Integer, ForeignKey('hashtag.id'), primary_key=True))
         meta.create_all()
-
-        # property_table_sql_insert_version_2 = "INSERT INTO db_properties (key, value) " \
-        #                                       "VALUES ('version', '{}');".format(
-        #                                           "2")
-        # self.engine.execute(property_table_sql_insert_version_2)
-
         property_table_sql_insert_version_2 = "UPDATE db_properties " \
                                               "SET value = '{}' " \
                                               "WHERE key ='version'; ".format(
                                                   "2")
         self.engine.execute(property_table_sql_insert_version_2)
-
         # postgis_sql = 'CREATE EXTENSION postgis;'
         # self.engine.execute(postgis_sql)
         # postgis_topology_sql = 'CREATE EXTENSION postgis_topology;'
@@ -187,6 +195,53 @@ class PostgresHandler:
         self.engine.execute(property_table_sql_insert_version_3)
         pass
 
+    def create_database_schema_version04(self):
+        ver = 4
+        meta = MetaData(self.engine)
+
+        cluster_id_seq = Sequence(
+            'cluster_id_seq', metadata=meta)
+        cluster_table = Table('cluster', meta,
+                              Column('id', BigInteger, cluster_id_seq,
+                                     server_default=cluster_id_seq.next_value(),
+                                     primary_key=True),
+                              Column('task_id', BigInteger, nullable=False),
+                              Column('task_name', String(100), nullable=False),
+                              Column('topic', String(2000), nullable=False),
+                              Column('topic_words', String(
+                                  500), nullable=False),
+                              Column('latitude_min', Numeric),
+                              Column('latitude_max', Numeric),
+                              Column('longitude_min', Numeric),
+                              Column('longitude_max', Numeric),
+                              Column('date_time_min', DateTime),
+                              Column('date_time_max', DateTime),
+                              )
+
+        cluster_point_id_seq = Sequence(
+            'cluster_point_id_seq', metadata=meta)
+        cluster_point = Table('cluster_point', meta,
+                              Column('id', BigInteger, cluster_id_seq,
+                                     server_default=cluster_point_id_seq.next_value(),
+                                     primary_key=True),
+                              Column('cluster_id', BigInteger, ForeignKey(
+                                  'cluster.id'), nullable=False),
+                              Column('longitude', Numeric, nullable=False),
+                              Column('latitude', Numeric, nullable=False),
+                              Column('text', String(500), nullable=False),
+                              Column('date_time', DateTime, nullable=False),
+                              Column('user_id', BigInteger, nullable=False),
+                              Column('tweet_id', BigInteger, nullable=False)
+                              )
+
+        meta.create_all()
+        property_table_sql_insert_version_2 = "UPDATE db_properties " \
+                                              "SET value = '{}' " \
+                                              "WHERE key ='version'; ".format(
+                                                  str(ver))
+        self.engine.execute(property_table_sql_insert_version_2)
+        pass
+
     def load_schema(self):
         meta = MetaData(self.engine)
         self.table_tweet = Table(
@@ -196,6 +251,14 @@ class PostgresHandler:
         self.table_hashtag = Table('hashtag', meta, autoload=True,
                                    autoload_with=self.engine)
         self.table_tweet_hashtag = Table('tweet_hashtag', meta, autoload=True,
+                                         autoload_with=self.engine)
+        self.table_event_detection_task = Table('event_detection_task', meta, autoload=True,
+                                                autoload_with=self.engine)
+
+        self.table_cluster = Table('cluster', meta, autoload=True,
+                                   autoload_with=self.engine)
+
+        self.table_cluster_point = Table('cluster_point', meta, autoload=True,
                                          autoload_with=self.engine)
 
     def check_db(self):
@@ -222,6 +285,9 @@ class PostgresHandler:
             if db_version == 2:
                 self.create_database_schema_version03()
                 db_version = self.get_db_version()
+            if db_version == 3:
+                self.create_database_schema_version04()
+                db_version = self.get_db_version()
 
             # if db_version is None or db_version != self.expected_db_version:
             #     raise Exception(
@@ -235,6 +301,49 @@ class PostgresHandler:
                                                                                                        PostgresHandler.expected_db_version))
 
         return self.db_is_checked
+
+
+class PostgresHandler_Tweets(PostgresHandler):
+
+    def __init__(self, DB_HOSTNAME, DB_PORT, DB_DATABASE, DB_USERNAME, DB_PASSWORD):
+        super().__init__(DB_HOSTNAME, DB_PORT, DB_DATABASE,
+                         DB_USERNAME, DB_PASSWORD)
+
+    def read_data_from_postgres(self, start_date: datetime, end_date: datetime, min_x, min_y, max_x, max_y, table_name='tweet', tag='', verbose=False, lang=None):
+        # todo: check if the table exists and catch any error
+        if verbose:
+            print('\tStart reading data ...')
+        s_time = datetime.now()
+
+        start = datetime(year=start_date.year, month=start_date.month,
+                         day=start_date.day, hour=start_date.hour, minute=start_date.minute)
+        end = datetime(year=end_date.year, month=end_date.month,
+                       day=end_date.day, hour=end_date.hour, minute=end_date.minute)
+        sql = F" SELECT * " \
+            " FROM  {} " \
+            " WHERE " \
+            " t_datetime > %s AND " \
+            " t_datetime <= %s AND " \
+            " x >= %s AND x < %s AND" \
+            " y >= %s AND y < %s ".format(table_name)
+
+        if tag != '':
+            sql = sql + " AND tag=\'{}\'".format(tag)
+
+        if lang is not None:
+            sql = sql + F" AND lang=\'{lang}\' "
+
+        self.check_db()
+
+        tweets = pd.read_sql_query(
+            sql, self.engine, params=(start, end, min_x, max_x, min_y, max_y))
+        tweets['t_datetime'] = tweets['t'].apply(pd.Timestamp.fromtimestamp)
+        number_of_tweets = tweets.id.count()
+
+        dur = datetime.now() - s_time
+        if verbose:
+            print('\tReading data was finished ({} seconds).'.format(dur.seconds))
+        return tweets, number_of_tweets
 
     def extract_hashtags(self, tweet_json):
         hashtags = []
@@ -619,59 +728,195 @@ class PostgresHandler:
         updateQuery = "update public.tweet set geom4326=ST_SetSRID(ST_MakePoint(x, y), 4326);"
         self.engine.execute(updateQuery)
 
-    # def create_table(table_name):
-    #     cursor = get_postgres_conn().cursor()
-    #     print("Connected!")
-    #     cursor.execute('DROP TABLE IF EXISTS {};'.format(
-    #         table_name))
-    #     get_postgres_conn().commit()
-    #
-    #     # [tweet['id'], t, t.timestamp(), tweet['lang'], tweet['user']['id'],
-    #     #             tweet['user']['screen_name'], tweet['coordinates']['coordinates'][0],
-    #     #             tweet['coordinates']['coordinates'][1], tweet['text'], str(cleaned_text)]
-    #
-    #     cursor.execute(
-    #         'CREATE TABLE IF NOT EXISTS {}('
-    #         'id serial PRIMARY KEY, tweetid bigint, t bigint, t_datetime timestamptz, '
-    #         'lang varchar(5), userid bigint, userscreenname varchar(50), x numeric, y numeric, '
-    #         'text varchar(300), c varchar(300), '
-    #         'geom4326 geometry(POINT, 4326)'
-    #         ');'.format(
-    #             table_name))
-    #
-    #     get_postgres_conn().commit()
-    #     print("Table is there.")
-    #     cursor.execute('DELETE FROM {};'.format(table_name))
-    #     get_postgres_conn().commit()
-    #     print("Table is empty.")
-    #     pass
-    #
-    # def insert_to_postgres(gdf: gpd.GeoDataFrame, table_name, srid, if_exist='replace'):
-    #     try:
-    #         # POSTGRESQL_USER = "postgres"
-    #         # POSTGRESQL_PASSWORD = "post123456"
-    #         # POSTGRESQL_HOST_IP = "127.0.0.1"
-    #         # POSTGRESQL_PORT = "5432"
-    #         # POSTGRESQL_DATABASE = "geotweets"
-    #
-    #         db_hostname, db_port, db_database, db_username, db_password = EnvVarSettings.get_connection_settings_from_env()
-    #
-    #         query_string = 'postgresql://{}:{}@{}:{}/{}'.format(db_username, db_password, db_hostname,
-    #                                                             db_port, db_database)
-    #         engine = create_engine(query_string, echo=False)
-    #         ds = gdf.copy()
-    #         ds['geom'] = ds['geometry'].apply(lambda x: WKTElement(x.wkt, srid=srid))
-    #         ds.drop('geometry', 1, inplace=True)
-    #         ds.to_sql(name=table_name,
-    #                   con=engine,
-    #                   if_exists=if_exist,
-    #                   index=False, dtype={'geom': Geometry('POINT', srid=str(srid))})
-    #         return True
-    #
-    #     except:
-    #         print('-' * 60)
-    #         print("Unexpected error:", sys.exc_info()[0])
-    #         print('-' * 60)
-    #         traceback.print_exc(file=sys.stdout)
-    #         print('-' * 60)
-    #         return False
+
+class PostgresHandler_EventDetection(PostgresHandler):
+    def __init__(self, DB_HOSTNAME, DB_PORT, DB_DATABASE, DB_USERNAME, DB_PASSWORD):
+        super().__init__(DB_HOSTNAME, DB_PORT, DB_DATABASE,
+                         DB_USERNAME, DB_PASSWORD)
+
+    def get_tasks(self, active=True) -> dict:
+        tasks = []
+        self.check_db()
+        result = self.engine.execute(self.table_event_detection_task.select())
+        for row in result:
+            if row['active'] == active:
+                tasks.append(
+                    {
+                        'task_id': row['task_id'],
+                        'task_name': row['task_name'],
+                        'desc': row['desc'],
+                        'min_x': row['min_x'],
+                        'min_y': row['min_y'],
+                        'max_x': row['max_x'],
+                        'max_y': row['max_y'],
+                        'look_back_hrs': row['look_back_hrs'],
+                        'lang_code': row['lang_code'],
+                        'interval_min': row['interval_min']}
+                )
+        return tasks
+
+    def get_tasks_bbox(self):
+        get_task_cql = "SELECT min(min_x) as min_x, min(min_y) as min_y, max(max_x) as max_x, max(max_y) as max_y from event_detection_task;"
+        res = self.engine.execute(get_task_cql)
+        for row in res:
+            return row['min_x'], row['min_y'], row['max_x'], row['max_y']
+        return None, None, None, None, None
+
+    def delete_event_detection_tasks(self):
+        self.check_db()
+        self.engine.execute(self.table_event_detection_task.delete())
+
+    def delete_event_detection_task(self, task_name):
+        self.check_db()
+        self.engine.execute(self.table_event_detection_task.delete().where(
+            self.table_event_detection_task.c.task_name == task_name))
+
+    def get_clusters(self, latitude_min, latitude_max, longitude_min, longitude_max, date_time_min, date_time_max):
+        get_clusters_sql = f"""SELECT * FROM cluster WHERE 
+            ST_Intersects(
+            ST_MakeEnvelope({longitude_min}, {longitude_max}, {latitude_min}, {latitude_max})
+            ,
+            ST_MakeEnvelope(longitude_min, longitude_max, latitude_min, latitude_max)
+            )
+            AND 
+            ('{date_time_min}' BETWEEN date_time_min AND date_time_max);"""
+
+        get_clusters_sql = get_clusters_sql.replace('\n', ' ')
+
+        res = self.engine.execute(get_clusters_sql)
+
+        clusters = []
+        for row in res:
+            clusters.append(
+                {
+                    'id': row['id'],
+                    'task_id': row['task_id'],
+                    'task_name': row['task_name'],
+                    'topic': row['topic'],
+                    'topic_words': row['topic_words'],
+                    'latitude_min': row['latitude_min'],
+                    'latitude_max': row['latitude_max'],
+                    'longitude_min': row['longitude_min'],
+                    'longitude_max': row['longitude_max'],
+                    'date_time_min': row['date_time_min'],
+                    'date_time_max': row['date_time_max'],
+                }
+            )
+        return clusters
+
+    def get_cluster_points(self, cluster_id):
+
+        get_point_sql = f"""SELECT * FROM cluster_point WHERE 
+            cluster_id = {cluster_id};"""
+        res = self.engine.execute(get_point_sql)
+
+        cluster_points = []
+        for row in res:
+            cluster_points.append(
+                {
+                    'id': row['id'],
+                    'cluster_id': row['cluster_id'],
+                    'longitude': row['longitude'],
+                    'latitude': row['latitude'],
+                    'text': row['text'],
+                    'date_time': row['date_time'],
+                    'user_id': row['user_id'],
+                    'tweet_id': row['tweet_id'],
+                }
+            )
+        return cluster_points
+
+    def get_cluster_point_tweet_ids(self, cluster_id):
+        get_point_sql = f"""SELECT tweet_id FROM cluster_point WHERE 
+            cluster_id = {cluster_id};"""
+
+        res = self.engine.execute(get_point_sql)
+
+        cluster_point_ids = []
+
+        for row in res:
+            cluster_point_ids.append(row['tweet_id'])
+
+        return cluster_point_ids
+
+    def insert_event_detection_task(self, task_name, desc: str, min_x, min_y, max_x, max_y, look_back_hrs, lang_code, interval_min, active=True, force_insert=False) -> int:
+        self.check_db()
+
+        ins = pg_insert(self.table_event_detection_task).values(
+            task_name=task_name[0:100],
+            desc=desc[0: 500],
+            min_x=min_x,
+            min_y=min_y,
+            max_x=max_x,
+            max_y=max_y,
+            look_back_hrs=look_back_hrs,
+            lang_code=lang_code,
+            interval_min=interval_min,
+            active=active)
+        if force_insert:
+            ins = ins.on_conflict_do_update(
+                index_elements=['task_name'],
+                set_=dict(
+                    task_name=task_name[0:100],
+                    desc=desc[0: 500],
+                    min_x=min_x,
+                    min_y=min_y,
+                    max_x=max_x,
+                    max_y=max_y,
+                    look_back_hrs=look_back_hrs,
+                    lang_code=lang_code,
+                    interval_min=interval_min,
+                    active=active)
+            )
+        else:
+            ins = ins.on_conflict_do_nothing(
+                index_elements=['task_id'])
+            ins = ins.on_conflict_do_nothing(
+                index_elements=['task_name'])
+        res = self.engine.execute(ins)
+        return res.lastrowid
+
+    def insert_clusters(self, clusters: list):
+        for cluster in clusters:
+            if cluster['id'] is None:
+                clust = cluster.copy()
+                points = clust.pop('points')
+                clust.pop('id')
+                ins = pg_insert(self.table_cluster).on_conflict_do_nothing(
+                    index_elements=['id']).values(clust)
+                res = self.engine.execute(ins)
+                clust_id = res.inserted_primary_key[0]
+                if clust_id is not None:
+                    for i in range(len(points)):
+                        points[i]["cluster_id"] = clust_id
+                    ins_points = pg_insert(self.table_cluster_point).on_conflict_do_nothing(
+                        index_elements=['id']).values(points)
+                    self.engine.execute(ins_points)
+                else:
+                    raise Exception('cluster_id is None!')
+            else:
+                clust = cluster.copy()
+                points = clust.pop('points')
+                ins = pg_insert(self.table_cluster).values(clust)
+                ins = ins.on_conflict_do_update(index_elements=['id'],
+                                                set_=clust).values(clust)  # Maybe I should pop the id before
+                self.engine.execute(ins)
+                ins_points = pg_insert(self.table_cluster_point).on_conflict_do_nothing(
+                    index_elements=['id']).values(points)
+                self.engine.execute(ins_points)
+        pass
+
+    # def insert_cluster(self, task_id, task_name, topic, topic_words, lat_min, lat_max, lon_min, lon_max) -> int:
+    #     ins_user = pg_insert(self.table_cluster).values(
+    #         task_id=task_id,
+    #         task_name=task_name,
+    #         topic=topic,
+    #         topic_words=topic_words,
+    #         lat_min=lat_min,
+    #         lat_max=lat_max,
+    #         lon_min=lon_min,
+    #         lon_max=lon_max
+    #     ).on_conflict_do_nothing(index_elements=['cluster_id'])
+    #     res_cluster = self.engine.execute(ins_user)
+
+    #     return res_cluster.lastrowid
