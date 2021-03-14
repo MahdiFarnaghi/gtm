@@ -64,3 +64,7 @@ services:
       DB_PASS: ${POSTGRES_PASS}
       DB_DATABASE: tweets_db
       LANGUAGES: en,pt
+networks: 
+  default: 
+    external: 
+      name: imsep_gtm_net        
